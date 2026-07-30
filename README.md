@@ -9,7 +9,16 @@
 A complete web application for managing public parks, users, zones, reports, and administrative processes. The system includes role-based authentication, real-time communication, PDF report generation, and a modular architecture built with Node.js and Express.
 
 ---
+## 🚀 Key Features
 
+- Secure authentication with JWT
+- Role-based access control
+- Park and zone management
+- PDF report generation
+- Real-time notifications using Socket.IO
+- Integrated chatbot
+- MySQL relational database
+- Modular backend architecture
 ## Overview
 
 The Park Management System was developed to simplify the administration of public parks by providing tools for managing parks, zones, users, reports, and other administrative tasks through a secure and scalable web application.
