@@ -9,7 +9,7 @@
 A complete web application for managing public parks, users, zones, reports, and administrative processes. The system includes role-based authentication, real-time communication, PDF report generation, and a modular architecture built with Node.js and Express.
 
 ---
-## 🚀 Key Features
+## Key Features
 
 - Secure authentication with JWT
 - Role-based access control
