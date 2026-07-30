@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Admin Dashboard</title>
+  <link rel="stylesheet" href="/css/system-responsive.css">
+  <script src="/js/system-form-helpers.js" defer></script>
+</head>
+<body>
+
+<h1>Panel Administrador</h1>
+
+<script>
+
+const user =
+JSON.parse(localStorage.getItem('user'));
+
+if(!user){
+
+    window.location.href='/login';
+}
+
+</script>
+
+</body>
+</html>

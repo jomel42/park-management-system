@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verificacion 2FA | Parques La Paz</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/login.css">
+  <link rel="stylesheet" href="/css/system-responsive.css">
+  <script src="/js/system-form-helpers.js" defer></script>
+</head>
+<body class="auth-body">
+  <nav class="auth-nav">
+    <a href="/" class="brand">
+      <span class="brand-mark"></span>
+      Parques La Paz
+    </a>
+    <div class="auth-nav-links">
+      <a href="/">Inicio</a>
+      <a href="/login">Volver al login</a>
+    </div>
+  </nav>
+
+  <main class="auth-shell">
+    <section class="auth-intro" aria-label="Verificacion">
+      <span class="eyebrow">Segundo factor</span>
+      <h1>Confirma tu acceso administrativo.</h1>
+      <p>
+        Enviamos un codigo de 6 digitos al correo asociado a tu cuenta.
+        El codigo expira en 5 minutos y se bloquea despues de 3 intentos.
+      </p>
+    </section>
+
+    <section class="auth-card" aria-label="Formulario de codigo OTP">
+      <div class="auth-card-head">
+        <span>Acceso protegido</span>
+        <h2>Codigo OTP</h2>
+        <p id="otpHint">Ingresa el codigo enviado a tu correo.</p>
+      </div>
+
+      <form id="otpForm" class="auth-form" novalidate>
+        <label for="codigo">
+          Codigo de 6 digitos
+          <input type="text" id="codigo" name="codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" required>
+        </label>
+
+        <button type="submit" class="btn-submit">Verificar codigo</button>
+      </form>
+
+      <p id="error" class="form-message" role="alert"></p>
+
+      <div class="auth-switch">
+        <span>Codigo incorrecto o expirado?</span>
+        <a href="/login">Inicia sesion nuevamente</a>
+      </div>
+    </section>
+  </main>
+
+  <script src="../js/otp.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Iniciando Sesión | Gestor</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Raleway:wght@600;800&display=swap');
+    
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #081408 0%, #0d1f0d 100%);
+      color: #81c784; 
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: 'Raleway', sans-serif;
+    }
+
+    .loader {
+      border: 4px solid rgba(129, 199, 132, 0.2);
+      border-top: 4px solid #efc45e;
+      border-radius: 50%;
+      width: 45px;
+      height: 45px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    h2 { font-weight: 800; letter-spacing: 1px; color: #e1ebd9; margin-bottom: 5px; }
+    p { font-size: 0.85rem; color: #82967e; font-weight: 600; text-transform: uppercase; letter-spacing: 2px;}
+  </style>
+  <link rel="stylesheet" href="/css/system-responsive.css">
+  <script src="/js/system-form-helpers.js" defer></script>
+</head>
+<body>
+
+  <div class="loader"></div>
+  <h2>Preparando espacio de trabajo...</h2>
+  <p>Verificando credenciales de seguridad</p>
+
+  <script>
+    setTimeout(() => {
+      const token = localStorage.getItem("token");
+      const user = JSON.parse(localStorage.getItem("user") || "null");
+
+      if (!token || !user) {
+        window.location.replace("/login");
+      } else {
+        // AHORA SÍ: LA RUTA CORRECTA HACIA TU MÓDULO DASHBOARD
+        window.location.replace("/admin-assets/gestor/dashboard/interfaces/index.html"); 
+      }
+    }, 800); 
+  </script>
+</body>
+</html>

@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sistema de Parques</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Raleway:wght@300;500;700;900&family=IBM+Plex+Mono:wght@400;600&display=swap');
+
+    :root {
+      --g900:#0a1a0a; --g800:#112211; --g700:#1a3a1a; --g600:#2d5a2d;
+      --g500:#3d7a3d; --g400:#4caf50; --g300:#7ecb82; --g200:#b8e6ba;
+      --crema:#f5f0e8; --rojo:#e53935; --nav-w:240px;
+    }
+
+    *{margin:0;padding:0;box-sizing:border-box}
+
+    body{
+      font-family:'Raleway',sans-serif;
+      background:var(--g900);
+      color:var(--crema);
+      min-height:100vh;
+      display:flex;
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar-nav{
+      width:var(--nav-w);
+      background:linear-gradient(180deg,#071407 0%,#0d200d 100%);
+      border-right:1px solid var(--g700);
+      display:flex;
+      flex-direction:column;
+      position:fixed;
+      top:0;left:0;bottom:0;
+      z-index:200;
+      transition:transform .3s ease;
+    }
+
+    .nav-logo{padding:22px 20px 18px;border-bottom:1px solid var(--g700)}
+    .nav-logo-icon{font-size:2rem;display:block;margin-bottom:6px}
+    .nav-logo h2{font-size:.95rem;font-weight:900;color:var(--g200);line-height:1.2}
+    .nav-logo p{font-size:.68rem;color:#5a8a5a;font-family:'IBM Plex Mono',monospace;margin-top:3px}
+
+    .nav-user{
+      display:flex;align-items:center;gap:10px;
+      padding:14px 20px;border-bottom:1px solid var(--g700);
+      background:rgba(0,0,0,.2);
+    }
+    .nav-avatar{
+      width:34px;height:34px;background:var(--g600);border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
+      font-size:1rem;border:2px solid var(--g400);flex-shrink:0;
+    }
+    .nav-user-nombre{font-size:.8rem;font-weight:700;color:var(--crema);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .nav-user-rol{font-size:.65rem;color:var(--g300);font-family:'IBM Plex Mono',monospace}
+
+    .nav-menu{flex:1;overflow-y:auto;padding:12px 0}
+    .nav-menu::-webkit-scrollbar{width:3px}
+    .nav-menu::-webkit-scrollbar-thumb{background:var(--g600)}
+
+    .nav-seccion-titulo{
+      font-size:.62rem;font-weight:700;color:#4a7a4a;
+      text-transform:uppercase;letter-spacing:2px;
+      font-family:'IBM Plex Mono',monospace;
+      padding:12px 20px 6px;
+    }
+
+    .nav-item{
+      display:flex;align-items:center;gap:11px;
+      padding:10px 20px;cursor:pointer;
+      text-decoration:none;color:#8aaa8a;
+      font-size:.875rem;font-weight:500;
+      border-left:3px solid transparent;
+      transition:all .18s ease;
+    }
+    .nav-item:hover{background:rgba(76,175,80,.08);color:var(--g200);border-left-color:var(--g500)}
+    .nav-item.activo{background:rgba(76,175,80,.14);color:var(--g300);border-left-color:var(--g400);font-weight:700}
+    .nav-item .nav-icono{font-size:1.05rem;width:22px;text-align:center;flex-shrink:0}
+
+    .nav-badge{
+      margin-left:auto;font-size:.58rem;padding:2px 7px;
+      border-radius:10px;font-family:'IBM Plex Mono',monospace;
+    }
+    .nav-badge.tuyo{background:var(--g600);color:var(--g200);border:1px solid var(--g400)}
+    .nav-badge.comp{background:#2a2a1a;color:#8a8a4a;border:1px solid #4a4a2a}
+
+    .nav-separador{height:1px;background:var(--g700);margin:8px 16px}
+
+    .nav-footer{padding:12px;border-top:1px solid var(--g700)}
+    .btn-logout{
+      width:100%;display:flex;align-items:center;gap:10px;
+      padding:10px 14px;background:rgba(229,57,53,.08);
+      border:1px solid rgba(229,57,53,.25);border-radius:8px;
+      color:#ff8a8a;cursor:pointer;font-family:'Raleway',sans-serif;
+      font-size:.85rem;font-weight:600;transition:.2s;
+    }
+    .btn-logout:hover{background:rgba(229,57,53,.15)}
+
+    /* ── HAMBURGUESA ── */
+    .btn-hamburguesa{
+      display:none;position:fixed;top:14px;left:14px;z-index:300;
+      background:var(--g700);border:1px solid var(--g500);border-radius:8px;
+      padding:8px 10px;cursor:pointer;font-size:1.1rem;color:var(--g200);
+    }
+    .overlay-nav{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:150}
+
+    /* ── CONTENIDO ── */
+    .contenido-principal{margin-left:var(--nav-w);flex:1;min-height:100vh;display:flex;flex-direction:column}
+
+    .topbar-contenido{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:14px 28px;
+      background:linear-gradient(90deg,#071407,#0d200d);
+      border-bottom:1px solid var(--g700);
+      position:sticky;top:0;z-index:100;
+    }
+    .topbar-titulo{font-size:1.1rem;font-weight:800;color:var(--g200)}
+    .topbar-breadcrumb{font-size:.75rem;color:#5a8a5a;font-family:'IBM Plex Mono',monospace}
+
+    /* ── PÁGINAS ── */
+    .pagina{display:none;flex:1}
+    .pagina.activa{display:block}
+
+    iframe{width:100%;height:calc(100vh - 57px);border:none;display:block}
+
+    /* ── PLACEHOLDER ── */
+    .placeholder-wrap{
+      display:flex;align-items:center;justify-content:center;
+      min-height:calc(100vh - 57px);flex-direction:column;gap:12px;
+    }
+    .placeholder-wrap p{color:#4a7a4a;font-family:'IBM Plex Mono',monospace;font-size:.9rem}
+    .placeholder-wrap span{font-size:2.5rem}
+
+    @media(max-width:768px){
+      .sidebar-nav{transform:translateX(-100%)}
+      .sidebar-nav.abierto{transform:translateX(0)}
+      .btn-hamburguesa{display:flex}
+      .overlay-nav.activo{display:block}
+      .contenido-principal{margin-left:0}
+    }
+  </style>
+  <link rel="stylesheet" href="/css/system-responsive.css">
+  <script src="/js/system-form-helpers.js" defer></script>
+</head>
+<body>
+
+<button class="btn-hamburguesa" onclick="toggleNav()">☰</button>
+<div class="overlay-nav" id="overlay-nav" onclick="toggleNav()"></div>
+
+<!-- ══ SIDEBAR ══ -->
+<nav class="sidebar-nav" id="sidebar-nav">
+
+  <div class="nav-logo">
+    <span class="nav-logo-icon">🌳</span>
+    <h2>Sistema de Parques</h2>
+    <p>v1.0 · Municipalidad</p>
+  </div>
+
+  <div class="nav-user">
+    <div class="nav-avatar" id="nav-avatar">👤</div>
+    <div>
+      <div class="nav-user-nombre" id="nav-nombre">Cargando...</div>
+      <div class="nav-user-rol"   id="nav-rol">—</div>
+    </div>
+  </div>
+
+  <div class="nav-menu">
+
+    <div class="nav-seccion-titulo">General</div>
+    <a class="nav-item activo" onclick="irA('inicio')" id="nav-inicio">
+      <span class="nav-icono">📈</span> Dashboard
+    </a>
+
+    <!-- Persona 1 -->
+    <div class="nav-separador"></div>
+    <div class="nav-seccion-titulo">Usuarios</div>
+    <a class="nav-item" onclick="irA('usuarios')" id="nav-usuarios">
+      <span class="nav-icono">👥</span> Gestión Usuarios
+      <span class="nav-badge comp">P1</span>
+    </a>
+
+    <!-- Persona 3 — TÚ -->
+    <div class="nav-separador"></div>
+    <div class="nav-seccion-titulo">Parques & Mapas</div>
+    <a class="nav-item" onclick="irA('parques')" id="nav-parques">
+      <span class="nav-icono">🌳</span> Parques
+      <span class="nav-badge tuyo">Tú</span>
+    </a>
+    <a class="nav-item" onclick="irA('canchas')" id="nav-canchas">
+      <span class="nav-icono">🏟️</span> Canchas
+      <span class="nav-badge tuyo">Tú</span>
+    </a>
+    <a class="nav-item" onclick="irA('mapas')" id="nav-mapas">
+      <span class="nav-icono">🗺️</span> Mapa
+      <span class="nav-badge tuyo">Tú</span>
+    </a>
+
+    <!-- Persona 4 -->
+    <div class="nav-separador"></div>
+    <div class="nav-seccion-titulo">Reportes</div>
+    <a class="nav-item" onclick="irA('reportes')" id="nav-reportes">
+      <span class="nav-icono">📊</span> Reportes
+      <span class="nav-badge comp">P4</span>
+    </a>
+    <a class="nav-item" onclick="irA('notificaciones')" id="nav-notificaciones">
+      <span class="nav-icono">🔔</span> Notificaciones
+      <span class="nav-badge comp">P4</span>
+    </a>
+
+  </div>
+
+  <div class="nav-footer">
+    <button class="btn-logout" onclick="cerrarSesion()">🚪 Cerrar sesión</button>
+  </div>
+
+</nav>
+
+<!-- ══ CONTENIDO ══ -->
+<div class="contenido-principal">
+
+  <div class="topbar-contenido">
+    <div>
+      <div class="topbar-titulo"     id="topbar-titulo">Inicio</div>
+      <div class="topbar-breadcrumb" id="topbar-breadcrumb">Sistema de Parques → Inicio</div>
+    </div>
+  </div>
+
+  <!-- INICIO -->
+  <div class="pagina activa" id="pagina-inicio">
+    <iframe id="iframe-inicio" src="/admin-assets/dashboard/interfaces/dashboard.html" title="Dashboard administrativo"></iframe>
+  </div>
+
+  <!-- TUS MÓDULOS — iframes -->
+  <div class="pagina" id="pagina-parques">
+    <iframe id="iframe-parques" src="" title="Parques"></iframe>
+  </div>
+  <div class="pagina" id="pagina-canchas">
+    <iframe id="iframe-canchas" src="" title="Canchas"></iframe>
+  </div>
+  <div class="pagina" id="pagina-mapas">
+    <iframe id="iframe-mapas" src="" title="Mapa"></iframe>
+  </div>
+
+  <!-- Persona 1 -->
+  <div class="pagina" id="pagina-usuarios">
+    <iframe id="iframe-usuarios" src="" title="Usuarios"></iframe>
+  </div>
+
+  <!-- Reportes -->
+  <div class="pagina" id="pagina-reportes">
+    <iframe id="iframe-reportes" src="" title="Reportes"></iframe>
+  </div>
+
+  <!-- ✅ NOTIFICACIONES — iframe (fix: reemplaza el placeholder) -->
+  <div class="pagina" id="pagina-notificaciones">
+    <iframe id="iframe-notificaciones" src="" title="Notificaciones"></iframe>
+  </div>
+
+</div>
+
+<script>
+const RUTAS = {
+  inicio:          "/admin-assets/dashboard/interfaces/dashboard.html",
+  parques:         "/admin-assets/parques/interfaces/parques.html",
+  canchas:         "/admin-assets/canchas/interfaces/canchas.html",
+  mapas:           "/admin-assets/mapa/interfaces/mapa.html",
+  usuarios:        "/admin-assets/usuarios/interfaces/usuarios.html",
+  reportes:        "/admin-assets/reportes/interfaces/reportes.html",
+  notificaciones: "/admin-assets/actividad/interfaces/actividad.html",
+};
+
+const TITULOS = {
+  inicio:"Inicio", parques:"Gestión de Parques", canchas:"Gestión de Canchas",
+  mapas:"Mapa de Parques", usuarios:"Gestión de Usuarios",
+  reportes:"Reportes", notificaciones:"Registro de Actividad",
+};
+
+const LOGIN_URL = "/login";
+let paginaActual = "inicio";
+const cargados   = new Set();
+
+function verificarSesion(){
+  const user = JSON.parse(localStorage.getItem("user") || "null");
+  if(!user){ window.location.href = LOGIN_URL; return; }
+  if(Number(user.id_rol) !== 1){ window.location.href = LOGIN_URL; return; }
+  const roles = { 1:"Administrador", 2:"Gestor", 3:"Usuario" };
+  document.getElementById("nav-nombre").textContent = user.nombre;
+  document.getElementById("nav-rol").textContent    = roles[user.id_rol] || "—";
+  document.getElementById("nav-avatar").textContent = user.nombre?.[0]?.toUpperCase() || "👤";
+}
+
+function hashReportes(params = {}){
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if(value !== undefined && value !== null && value !== "") query.set(key, value);
+  });
+  const text = query.toString();
+  return text ? `#${text}` : "";
+}
+
+function irA(seccion, opciones = {}){
+  document.getElementById(`pagina-${paginaActual}`)?.classList.remove("activa");
+  document.getElementById(`nav-${paginaActual}`)?.classList.remove("activo");
+
+  paginaActual = seccion;
+  document.getElementById(`pagina-${seccion}`)?.classList.add("activa");
+  document.getElementById(`nav-${seccion}`)?.classList.add("activo");
+
+  document.getElementById("topbar-titulo").textContent     = TITULOS[seccion] || seccion;
+  document.getElementById("topbar-breadcrumb").textContent = `Sistema de Parques → ${TITULOS[seccion] || seccion}`;
+
+  // Carga lazy: solo la primera vez
+  const ruta = RUTAS[seccion];
+  if(ruta){
+    const iframe = document.getElementById(`iframe-${seccion}`);
+    const hash = seccion === "reportes" ? hashReportes(opciones.reportes) : "";
+    if(iframe && (!cargados.has(seccion) || hash)){
+      iframe.src = `${ruta}${hash}`;
+      cargados.add(seccion);
+    }
+  }
+
+  if(window.innerWidth <= 768){
+    document.getElementById("sidebar-nav").classList.remove("abierto");
+    document.getElementById("overlay-nav").classList.remove("activo");
+  }
+}
+
+function cerrarSesion(){
+  fetch("/api/auth/logout", { method:"POST" }).catch(() => {});
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+  window.location.href = "/login";
+}
+
+function toggleNav(){
+  document.getElementById("sidebar-nav").classList.toggle("abierto");
+  document.getElementById("overlay-nav").classList.toggle("activo");
+}
+
+window.addEventListener("message", (event) => {
+  if(event.origin !== window.location.origin) return;
+  const data = event.data || {};
+  if(data.type !== "admin:navigate") return;
+  if(data.target === "reportes"){
+    irA("reportes", {
+      reportes: {
+        section: data.section || "todos",
+        prioridad: data.prioridad || "",
+        estado: data.estado || "",
+        gestor: data.gestor || ""
+      }
+    });
+    return;
+  }
+  if(RUTAS[data.target]) irA(data.target);
+});
+
+verificarSesion();
+</script>
+</body>
+</html>

@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gestión de Parques</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Raleway:wght@300;500;700;900&family=IBM+Plex+Mono:wght@400;600&display=swap');
+    :root{--g900:#0a1a0a;--g800:#112211;--g700:#1a3a1a;--g600:#2d5a2d;--g500:#3d7a3d;--g400:#4caf50;--g300:#7ecb82;--g200:#b8e6ba;--crema:#f5f0e8;--rojo:#e53935}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Raleway',sans-serif;background:var(--g900);color:var(--crema);min-height:100vh}
+    .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;background:linear-gradient(90deg,#071407,#122212);border-bottom:2px solid var(--g400);position:sticky;top:0;z-index:100}
+    .topbar-left{display:flex;align-items:center;gap:14px}
+    .topbar h1{font-size:1.25rem;font-weight:900;color:var(--g200)}
+    .badge-total{font-family:'IBM Plex Mono',monospace;font-size:.72rem;background:var(--g600);color:var(--g200);padding:3px 12px;border-radius:20px;border:1px solid var(--g400)}
+    .topbar-right{display:flex;align-items:center;gap:12px}
+    .usuario-info{font-size:.8rem;color:var(--g300);font-family:'IBM Plex Mono',monospace}
+    .btn-logout{padding:7px 16px;background:rgba(229,57,53,.15);border:1px solid rgba(229,57,53,.4);border-radius:8px;color:#ff8a8a;font-family:'Raleway',sans-serif;font-weight:700;font-size:.8rem;cursor:pointer;transition:.2s}
+    .btn-logout:hover{background:rgba(229,57,53,.3)}
+    .btn-nuevo{display:flex;align-items:center;gap:8px;padding:9px 20px;background:var(--g400);color:#fff;border:none;border-radius:8px;font-family:'Raleway',sans-serif;font-weight:700;font-size:.85rem;cursor:pointer;transition:.2s}
+    .btn-nuevo:hover{background:var(--g300);transform:translateY(-1px)}
+    .main{max-width:1200px;margin:0 auto;padding:28px 20px}
+    .filtros{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+    .input-buscar,.select-filtro{padding:10px 16px;background:var(--g800);border:1px solid var(--g600);border-radius:8px;color:var(--crema);font-family:'Raleway',sans-serif;font-size:.9rem;outline:none}
+    .input-buscar{flex:1;min-width:180px}.input-buscar::placeholder{color:#5a8a5a}
+    .input-buscar:focus,.select-filtro:focus{border-color:var(--g400)}
+    .select-filtro option{background:var(--g800)}
+    .cards-wrapper{background:rgba(17,34,17,.78);border:1px solid var(--g700);border-radius:8px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.35)}
+    .cards-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;padding:18px}
+    .admin-card{min-height:250px;border:1px solid var(--g700);border-radius:8px;background:linear-gradient(180deg,#132613,#0d1d0d);padding:17px;display:grid;gap:13px;cursor:pointer;transition:.2s}
+    .admin-card:hover{border-color:rgba(126,203,130,.58);transform:translateY(-2px);box-shadow:0 12px 28px rgba(0,0,0,.28)}
+    .card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+    .card-title h3{font-size:1rem;color:var(--crema);line-height:1.25}
+    .card-title span{display:block;margin-top:5px;color:var(--g300);font-family:'IBM Plex Mono',monospace;font-size:.72rem}
+    .status-circle{width:74px;height:74px;border-radius:50%;display:grid;place-items:center;text-align:center;padding:8px;border:2px solid;font-size:.64rem;font-weight:900;text-transform:uppercase;letter-spacing:.04em;line-height:1.1;flex:0 0 auto}
+    .status-circle.abierto{background:rgba(76,175,80,.14);border-color:#6dda76;color:#91f59a;box-shadow:0 0 0 8px rgba(76,175,80,.08)}
+    .status-circle.cerrado{background:rgba(229,57,53,.13);border-color:#ff7777;color:#ff9b9b;box-shadow:0 0 0 8px rgba(229,57,53,.07)}
+    .card-desc{color:#91b791;font-size:.84rem;line-height:1.55;min-height:40px}
+    .card-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    .meta-chip{border:1px solid rgba(126,203,130,.16);border-radius:8px;background:rgba(0,0,0,.16);padding:8px;color:#9cc49c;font-size:.76rem;line-height:1.35}
+    .meta-chip strong{display:block;color:var(--g200);font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px}
+    .card-actions{display:flex;gap:7px;flex-wrap:wrap;align-self:end}
+    .card-actions .btn-accion{min-height:34px}
+    .tabla-wrapper{background:var(--g800);border:1px solid var(--g700);border-radius:14px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.35)}
+    table{width:100%;border-collapse:collapse}
+    thead{background:linear-gradient(90deg,#0d200d,#162816);border-bottom:2px solid var(--g600)}
+    th{padding:14px 18px;text-align:left;font-size:.72rem;font-weight:700;color:var(--g300);text-transform:uppercase;letter-spacing:1.5px;font-family:'IBM Plex Mono',monospace;white-space:nowrap}
+    tbody tr{border-bottom:1px solid #1f3a1f;transition:background .15s}
+    tbody tr:last-child{border-bottom:none}
+    tbody tr:hover{background:#172e17;cursor:pointer}
+    td{padding:13px 18px;font-size:.875rem;vertical-align:middle}
+    .td-id{font-family:'IBM Plex Mono',monospace;font-size:.75rem;color:var(--g300)}
+    .td-nombre{font-weight:700}.td-zona{font-size:.8rem;color:var(--g200);font-family:'IBM Plex Mono',monospace}
+    .td-coords{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:#7a9a7a}
+    .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:.68rem;font-weight:700;text-transform:uppercase;white-space:nowrap}
+    .badge.abierto{background:#1a4a1a;color:#7eff82;border:1px solid #3a7a3a}
+    .badge.cerrado{background:#4a1a1a;color:#ff8a8a;border:1px solid #7a3a3a}
+    .acciones{display:flex;gap:7px}
+    .btn-accion{padding:6px 12px;border:none;border-radius:6px;font-family:'Raleway',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;transition:.2s;display:flex;align-items:center;gap:5px}
+    .btn-ver{background:#1a3a5a;color:#7ac8ff;border:1px solid #2a5a8a}.btn-ver:hover{background:#1f4a7a}
+    .btn-editar{background:#3a3a1a;color:#ffe07a;border:1px solid #6a6a1a}.btn-editar:hover{background:#4a4a1a}
+    .btn-estado{background:#2a1a3a;color:#c87aff;border:1px solid #5a2a8a}.btn-estado:hover{background:#3a1a5a}
+    .btn-borrar{background:#3a1a1a;color:#ff8a8a;border:1px solid #7a2a2a}.btn-borrar:hover{background:#4a1a1a}
+    .sin-datos{text-align:center;padding:60px 20px;color:#5a8a5a;font-size:.9rem}
+    .sin-datos .icono{font-size:3rem;margin-bottom:12px}
+    .paginacion{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-top:1px solid var(--g700);font-size:.8rem;color:#6a9a6a;font-family:'IBM Plex Mono',monospace}
+    .pag-botones{display:flex;gap:6px}
+    .pag-btn{padding:5px 12px;background:var(--g700);border:1px solid var(--g600);border-radius:6px;color:var(--g200);cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:.78rem;transition:.2s}
+    .pag-btn:hover:not(:disabled){background:var(--g600)}.pag-btn:disabled{opacity:.35;cursor:not-allowed}
+    .pag-btn.activo{background:var(--g500);border-color:var(--g400);color:#fff}
+    .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;backdrop-filter:blur(4px);align-items:center;justify-content:center}
+    .overlay.activo{display:flex}
+    .modal{background:var(--g800);border:1px solid var(--g500);border-radius:16px;width:100%;max-width:600px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.6);animation:slideUp .25s ease}
+    @keyframes slideUp{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+    .modal-header{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--g700);background:linear-gradient(90deg,#0d200d,#162816);border-radius:16px 16px 0 0}
+    .modal-titulo{font-size:1.05rem;font-weight:800;color:var(--g200)}
+    .btn-cerrar{background:none;border:none;color:#7a9a7a;font-size:1.4rem;cursor:pointer;line-height:1}
+    .btn-cerrar:hover{color:var(--rojo)}
+    .modal-body{padding:24px}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .form-full{grid-column:1/-1}
+    .campo label{display:block;font-size:.75rem;font-weight:700;color:var(--g300);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;font-family:'IBM Plex Mono',monospace}
+    .campo input,.campo select,.campo textarea{width:100%;padding:10px 14px;background:var(--g700);border:1px solid var(--g600);border-radius:8px;color:var(--crema);font-family:'Raleway',sans-serif;font-size:.9rem;outline:none;transition:border-color .2s}
+    .campo input:focus,.campo select:focus,.campo textarea:focus{border-color:var(--g400)}
+    .campo select option{background:var(--g700)}.campo textarea{resize:vertical;min-height:70px}
+    .hint{font-size:.75rem;color:#7a9a7a;margin-bottom:8px}
+    #mini-mapa{width:100%;height:200px;border-radius:10px;border:1px solid var(--g600)}
+    .modal-footer{display:flex;justify-content:flex-end;gap:10px;padding:16px 24px;border-top:1px solid var(--g700)}
+    .btn-cancelar{padding:10px 22px;background:transparent;border:1px solid var(--g600);border-radius:8px;color:#8aaa8a;font-family:'Raleway',sans-serif;font-weight:700;font-size:.875rem;cursor:pointer}
+    .btn-cancelar:hover{background:var(--g700)}
+    .btn-guardar{padding:10px 28px;background:var(--g400);border:none;border-radius:8px;color:#fff;font-family:'Raleway',sans-serif;font-weight:700;font-size:.875rem;cursor:pointer}
+    .btn-guardar:hover{background:var(--g300)}.btn-guardar:disabled{opacity:.5;cursor:not-allowed}
+    .detalle-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .detalle-item label{font-size:.7rem;color:var(--g300);text-transform:uppercase;letter-spacing:1px;font-family:'IBM Plex Mono',monospace;display:block;margin-bottom:4px}
+    .detalle-item p{font-size:.9rem;color:var(--crema);font-weight:500}.detalle-full{grid-column:1/-1}
+    #mapa-detalle{width:100%;height:220px;border-radius:10px;border:1px solid var(--g600);margin-top:16px}
+    .confirm-body{padding:28px 24px;text-align:center}
+    .confirm-icono{font-size:3rem;margin-bottom:14px}
+    .confirm-texto{font-size:1rem;line-height:1.6}
+    .confirm-nombre{font-weight:900;color:#ff8a8a}
+    .confirm-footer{display:flex;justify-content:center;gap:12px;padding-bottom:20px}
+    .btn-confirmar-borrar{padding:10px 28px;background:var(--rojo);border:none;border-radius:8px;color:#fff;font-family:'Raleway',sans-serif;font-weight:700;cursor:pointer}
+    .toast{position:fixed;bottom:28px;right:28px;background:var(--g700);border:1px solid var(--g400);border-radius:10px;padding:14px 20px;font-size:.875rem;font-weight:600;color:var(--g200);z-index:999;transform:translateY(20px);opacity:0;transition:.3s;max-width:320px}
+    .toast.visible{transform:translateY(0);opacity:1}.toast.error{border-color:var(--rojo);color:#ff8a8a}
+  </style>
+  <link rel="stylesheet" href="/css/system-responsive.css">
+  <script src="/js/system-form-helpers.js" defer></script>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <span style="font-size:1.5rem">🌳</span>
+    <h1>Gestión de Parques</h1>
+    <span class="badge-total" id="badge-total">Cargando...</span>
+  </div>
+  <div class="topbar-right">
+    <span class="usuario-info">👤 <span id="usuario-nombre">—</span></span>
+    <button class="btn-nuevo" onclick="abrirModalNuevo()">＋ Nuevo Parque</button>
+    <button class="btn-logout" onclick="cerrarSesion()">🚪 Salir</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="filtros">
+    <input class="input-buscar" id="buscar" type="text" list="sugerencias-buscar-parques" maxlength="80" autocomplete="off" placeholder="🔍 Buscar por nombre o zona..." oninput="filtrar()"/>
+    <datalist id="sugerencias-buscar-parques"></datalist>
+    <select class="select-filtro" id="filtro-estado" onchange="filtrar()">
+      <option value="">Todos los estados</option>
+      <option value="1">✅ Abiertos</option>
+      <option value="0">❌ Cerrados</option>
+    </select>
+    <select class="select-filtro" id="filtro-zona" onchange="filtrar()">
+      <option value="">Todas las zonas</option>
+    </select>
+  </div>
+
+  <div class="cards-wrapper">
+    <div class="cards-grid" id="cards"></div>
+    <div class="paginacion">
+      <span id="info-pag">—</span>
+      <div class="pag-botones" id="pag-botones"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL FORM -->
+<div class="overlay" id="overlay-form">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-titulo" id="titulo-form">Nuevo Parque</span>
+      <button class="btn-cerrar" onclick="cerrarModales()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="campo form-full"><label>Nombre *</label><input type="text" id="f-nombre" maxlength="60" data-validate="name" placeholder="Ej: Parque Central"/></div>
+        <div class="campo form-full"><label>Descripción</label><textarea id="f-descripcion" placeholder="Descripción breve..."></textarea></div>
+        <div class="campo"><label>Zona *</label><select id="f-zona"><option value="">— Seleccionar —</option></select></div>
+        <div class="campo"><label>Altitud (m)</label><input type="number" id="f-altitud" placeholder="Ej: 3640" step="0.01"/></div>
+        <div class="campo"><label>Hora de apertura *</label><input type="time" id="f-hora-apertura" value="06:00"/></div>
+        <div class="campo"><label>Hora de cierre *</label><input type="time" id="f-hora-cierre" value="20:00"/></div>
+        <div class="campo"><label>Latitud *</label><input type="number" id="f-latitud" placeholder="-16.5000" step="0.0000001"/></div>
+        <div class="campo"><label>Longitud *</label><input type="number" id="f-longitud" placeholder="-68.1500" step="0.0000001"/></div>
+        <div class="campo form-full">
+          <label>📍 Haz clic en el mapa para seleccionar ubicación</label>
+          <p class="hint">El clic llena latitud y longitud automáticamente</p>
+          <div id="mini-mapa"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancelar" onclick="cerrarModales()">Cancelar</button>
+      <button class="btn-guardar" id="btn-guardar" onclick="guardarParque()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL VER -->
+<div class="overlay" id="overlay-ver">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-titulo">Detalle del Parque</span>
+      <button class="btn-cerrar" onclick="cerrarModales()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="detalle-grid" id="detalle-contenido"></div>
+      <div id="mapa-detalle"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancelar" onclick="cerrarModales()">Cerrar</button>
+      <button class="btn-guardar" onclick="editarDesdeDetalle()">✏️ Editar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL BORRAR -->
+<div class="overlay" id="overlay-borrar">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <span class="modal-titulo" style="color:#ff8a8a">⚠️ Eliminar Parque</span>
+      <button class="btn-cerrar" onclick="cerrarModales()">✕</button>
+    </div>
+    <div class="confirm-body">
+      <div class="confirm-icono">🗑️</div>
+      <p class="confirm-texto">¿Seguro que quieres eliminar<br><span class="confirm-nombre" id="nombre-a-borrar"></span>?<br><small style="color:#7a9a7a;font-size:.8rem">Esta acción no se puede deshacer.</small></p>
+    </div>
+    <div class="confirm-footer">
+      <button class="btn-cancelar" onclick="cerrarModales()">Cancelar</button>
+      <button class="btn-confirmar-borrar" onclick="confirmarBorrar()">Sí, eliminar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ════════════════════════════════════════════════════
+//  CONFIG
+// ════════════════════════════════════════════════════
+const API = "/api";
+
+const LOGIN_URL = "/login";
+
+const POR_PAGINA = 8;
+let parques=[], filtrados=[], zonas=[];
+let pagina=1, parqueEditando=null, parqueBorrando=null, parqueViendoId=null;
+let miniMapa=null, miniMarcador=null, mapaDetalle=null;
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function estaAbiertoAhora(p) {
+  return Number(p.abierto_ahora ?? p.esta_abierto) === 1;
+}
+
+function estaHabilitadoManual(p) {
+  return Number(p.esta_abierto) === 1;
+}
+
+function horarioTexto(p) {
+  return `${p.hora_apertura || "06:00"}-${p.hora_cierre || "20:00"}`;
+}
+
+function coordenadasTexto(p) {
+  const lat = Number(p.latitud);
+  const lng = Number(p.longitud);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return "Sin coordenadas";
+  return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+}
+
+function normalizarBusqueda(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function limpiarNombre(value, max = 60) {
+  return String(value || "")
+    .replace(/[^\p{L}\s'-]/gu, "")
+    .replace(/\s{2,}/g, " ")
+    .slice(0, max);
+}
+
+function nombreValido(value) {
+  return /^[\p{L}][\p{L}\s'-]{1,59}$/u.test(String(value || "").trim());
+}
+
+function valoresBusquedaParque(p) {
+  return [p.nombre, p.nombre_zona].filter(Boolean).map(String);
+}
+
+function actualizarSugerenciasBusquedaParques(query = normalizarBusqueda(document.getElementById("buscar")?.value)) {
+  const datalist = document.getElementById("sugerencias-buscar-parques");
+  if (!datalist) return;
+
+  const vistos = new Set();
+  const sugerencias = [];
+
+  parques.forEach(p => {
+    valoresBusquedaParque(p).forEach(value => {
+      const texto = value.trim();
+      const key = normalizarBusqueda(texto);
+      if (!texto || vistos.has(key)) return;
+      if (query && !key.startsWith(query) && !key.includes(query)) return;
+      vistos.add(key);
+      sugerencias.push({ texto, starts: !query || key.startsWith(query) });
+    });
+  });
+
+  sugerencias.sort((a, b) => Number(b.starts) - Number(a.starts) || a.texto.localeCompare(b.texto, "es"));
+  datalist.innerHTML = sugerencias.slice(0, 10).map(item => `<option value="${escapeHtml(item.texto)}"></option>`).join("");
+}
+
+function prepararValidacionParques() {
+  const nombre = document.getElementById("f-nombre");
+  nombre?.addEventListener("input", () => {
+    const limpio = limpiarNombre(nombre.value);
+    if (nombre.value !== limpio) nombre.value = limpio;
+  });
+}
+
+// ════════════════════════════════════════════════════
+//  HELPER: fetch con JWT desde localStorage
+// ════════════════════════════════════════════════════
+async function apiFetch(url, opts = {}) {
+
+  const token =
+  localStorage.getItem("token");
+
+  const res = await fetch(
+
+    `${API}${url}`,
+
+    {
+
+      ...opts,
+
+      headers: {
+
+        "Content-Type":"application/json",
+
+        "Authorization":
+        `Bearer ${token}`,
+
+        ...opts.headers
+      }
+    }
+  );
+
+  return await res.json();
+}
+// ════════════════════════════════════════════════════
+//  SESIÓN
+// ════════════════════════════════════════════════════
+function verificarSesion(){
+
+  const user = JSON.parse(
+
+    localStorage.getItem("user")
+  );
+
+  if(!user){
+
+    window.location.href =
+    LOGIN_URL;
+
+    return;
+  }
+
+  document.getElementById(
+    "usuario-nombre"
+  ).textContent =
+
+  user.nombre || "Admin";
+}
+function cerrarSesion() {
+  fetch("/api/auth/logout", { method:"POST" }).catch(() => {});
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  window.location.href = LOGIN_URL;
+}
+
+// ════════════════════════════════════════════════════
+//  INICIO
+// ════════════════════════════════════════════════════
+document.addEventListener("DOMContentLoaded", async () => {
+  verificarSesion();
+  prepararValidacionParques();
+  await cargarZonas();
+  await cargarParques();
+});
+
+// ════════════════════════════════════════════════════
+//  CATÁLOGOS
+// ════════════════════════════════════════════════════
+async function cargarZonas() {
+  const json = await apiFetch("/zonas");
+  zonas = json || [];
+
+  const selF     = document.getElementById("f-zona");
+  const selFiltro = document.getElementById("filtro-zona");
+  zonas.forEach(z => {
+    [selF, selFiltro].forEach(sel => {
+      const o = document.createElement("option");
+      o.value = z.id_zona; o.textContent = z.nombre_zona;
+      sel.appendChild(o);
+    });
+  });
+}
+
+// ════════════════════════════════════════════════════
+//  PARQUES
+// ════════════════════════════════════════════════════
+async function cargarParques() {
+  const json = await apiFetch("/parques");
+  parques = json || [];
+  filtrados = [...parques];
+  actualizarSugerenciasBusquedaParques("");
+  renderTabla();
+  document.getElementById("badge-total").textContent = `${parques.length} parques`;
+}
+
+// ════════════════════════════════════════════════════
+//  TABLA
+// ════════════════════════════════════════════════════
+function renderTabla() {
+  const tbody  = document.getElementById("tbody");
+  const inicio = (pagina - 1) * POR_PAGINA;
+  const datos  = filtrados.slice(inicio, inicio + POR_PAGINA);
+
+  if (!filtrados.length) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="sin-datos"><div class="icono">🌿</div>No hay parques registrados</div></td></tr>`;
+    renderPaginacion(); return;
+  }
+
+  tbody.innerHTML = datos.map(p => `
+    <tr onclick="verParque(${p.id_parque})">
+      <td class="td-id">#${p.id_parque}</td>
+      <td class="td-nombre">🌳 ${p.nombre}</td>
+      <td class="td-zona">${p.nombre_zona || "—"}</td>
+      <td class="td-coords">${parseFloat(p.latitud).toFixed(4)},<br>${parseFloat(p.longitud).toFixed(4)}</td>
+      <td><span class="badge ${p.esta_abierto ? "abierto" : "cerrado"}">${p.esta_abierto ? "✅ Abierto" : "❌ Cerrado"}</span></td>
+      <td onclick="event.stopPropagation()">
+        <div class="acciones">
+          <button class="btn-accion btn-ver"    onclick="verParque(${p.id_parque})">👁 Ver</button>
+          <button class="btn-accion btn-editar" onclick="abrirModalEditar(${p.id_parque})">✏️ Editar</button>
+          <button class="btn-accion btn-estado" onclick="cambiarEstado(${p.id_parque})">${p.esta_abierto ? "🔒 Cerrar" : "🔓 Abrir"}</button>
+          <button class="btn-accion btn-borrar" onclick="pedirBorrar(${p.id_parque})">🗑 Borrar</button>
+        </div>
+      </td>
+    </tr>
+  `).join("");
+  renderPaginacion();
+}
+
+function renderTabla() {
+  const contenedor = document.getElementById("cards");
+  const inicio = (pagina - 1) * POR_PAGINA;
+  const datos = filtrados.slice(inicio, inicio + POR_PAGINA);
+
+  if (!filtrados.length) {
+    contenedor.innerHTML = `<div class="sin-datos"><div class="icono">Parques</div>No hay parques registrados</div>`;
+    renderPaginacion();
+    return;
+  }
+
+  contenedor.innerHTML = datos.map(p => {
+    const abierto = estaAbiertoAhora(p);
+    const habilitado = estaHabilitadoManual(p);
+    return `
+      <article class="admin-card" onclick="verParque(${p.id_parque})">
+        <div class="card-head">
+          <div class="card-title">
+            <h3>${escapeHtml(p.nombre)}</h3>
+            <span>#${p.id_parque} - ${escapeHtml(p.nombre_zona || "Sin zona")}</span>
+          </div>
+          <div class="status-circle ${abierto ? "abierto" : "cerrado"}">${abierto ? "Abierto" : "Cerrado"}</div>
+        </div>
+        <p class="card-desc">${escapeHtml(p.descripcion || "Sin descripcion registrada.")}</p>
+        <div class="card-meta">
+          <div class="meta-chip"><strong>Horario</strong>${escapeHtml(horarioTexto(p))}</div>
+          <div class="meta-chip"><strong>Manual</strong>${habilitado ? "Habilitado" : "Cerrado manual"}</div>
+          <div class="meta-chip"><strong>Coordenadas</strong>${escapeHtml(coordenadasTexto(p))}</div>
+          <div class="meta-chip"><strong>Altitud</strong>${p.altitud ? `${escapeHtml(p.altitud)} m` : "Sin dato"}</div>
+        </div>
+        <div class="card-actions" onclick="event.stopPropagation()">
+          <button class="btn-accion btn-ver" onclick="verParque(${p.id_parque})">Ver</button>
+          <button class="btn-accion btn-editar" onclick="abrirModalEditar(${p.id_parque})">Editar</button>
+          <button class="btn-accion btn-estado" onclick="cambiarEstado(${p.id_parque})">${habilitado ? "Cerrar" : "Abrir"}</button>
+          <button class="btn-accion btn-borrar" onclick="pedirBorrar(${p.id_parque})">Borrar</button>
+        </div>
+      </article>
+    `;
+  }).join("");
+
+  renderPaginacion();
+}
+
+function renderPaginacion() {
+  const total = filtrados.length, paginas = Math.ceil(total / POR_PAGINA);
+  const ini = Math.min((pagina - 1) * POR_PAGINA + 1, total), fin = Math.min(pagina * POR_PAGINA, total);
+  document.getElementById("info-pag").textContent = total === 0 ? "0 resultados" : `Mostrando ${ini}–${fin} de ${total}`;
+  const cont = document.getElementById("pag-botones"); cont.innerHTML = "";
+  const bA = document.createElement("button"); bA.className = "pag-btn"; bA.textContent = "← Ant"; bA.disabled = pagina === 1; bA.onclick = () => { pagina--; renderTabla(); }; cont.appendChild(bA);
+  for (let i = 1; i <= paginas; i++) { const b = document.createElement("button"); b.className = `pag-btn ${i === pagina ? "activo" : ""}`; b.textContent = i; b.onclick = () => { pagina = i; renderTabla(); }; cont.appendChild(b); }
+  const bS = document.createElement("button"); bS.className = "pag-btn"; bS.textContent = "Sig →"; bS.disabled = pagina >= paginas; bS.onclick = () => { pagina++; renderTabla(); }; cont.appendChild(bS);
+}
+
+function filtrar() {
+  const buscador = document.getElementById("buscar");
+  const limpio = limpiarNombre(buscador.value, 80);
+  if (buscador.value !== limpio) buscador.value = limpio;
+  const q = normalizarBusqueda(limpio);
+  const est = document.getElementById("filtro-estado").value;
+  const zon = document.getElementById("filtro-zona").value;
+
+  const resultados = [];
+  parques.forEach(p => {
+    const valores = valoresBusquedaParque(p).map(normalizarBusqueda);
+    const mQ = !q || valores.some(value => value.includes(q));
+    const starts = q && valores.some(value => value.startsWith(q));
+    const mE = est === "" || String(estaAbiertoAhora(p) ? 1 : 0) === est;
+    const mZ = zon === "" || String(p.id_zona) === zon;
+    if (mQ && mE && mZ) resultados.push({ p, score: starts ? 0 : 1 });
+  });
+  filtrados = q
+    ? resultados.sort((a, b) => a.score - b.score || a.p.nombre.localeCompare(b.p.nombre, "es")).map(item => item.p)
+    : resultados.map(item => item.p);
+  actualizarSugerenciasBusquedaParques(q);
+  pagina = 1; renderTabla();
+}
+
+// ════════════════════════════════════════════════════
+//  VER / EDITAR / NUEVO
+// ════════════════════════════════════════════════════
+function verParque(id) {
+  const p = parques.find(x => x.id_parque === id); if (!p) return;
+  parqueViendoId = id;
+  document.getElementById("detalle-contenido").innerHTML = `
+    <div class="detalle-item"><label>ID</label><p>#${p.id_parque}</p></div>
+    <div class="detalle-item"><label>Nombre</label><p>${p.nombre}</p></div>
+    <div class="detalle-item"><label>Zona</label><p>${p.nombre_zona || "—"}</p></div>
+    <div class="detalle-item"><label>Estado</label><p><span class="badge ${p.esta_abierto ? "abierto" : "cerrado"}">${p.esta_abierto ? "✅ Abierto" : "❌ Cerrado"}</span></p></div>
+    <div class="detalle-item"><label>Latitud</label><p>${p.latitud}</p></div>
+    <div class="detalle-item"><label>Longitud</label><p>${p.longitud}</p></div>
+    <div class="detalle-item"><label>Altitud</label><p>${p.altitud ? p.altitud + " m" : "—"}</p></div>
+    <div class="detalle-item detalle-full"><label>Descripción</label><p>${p.descripcion || "—"}</p></div>
+  `;
+  document.getElementById("overlay-ver").classList.add("activo");
+  setTimeout(() => {
+    if (mapaDetalle) { mapaDetalle.remove(); mapaDetalle = null; }
+    mapaDetalle = L.map("mapa-detalle").setView([p.latitud, p.longitud], 15);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapaDetalle);
+    L.marker([p.latitud, p.longitud]).addTo(mapaDetalle).bindPopup(`<b>${p.nombre}</b>`).openPopup();
+  }, 150);
+}
+
+function verParque(id) {
+  const p = parques.find(x => x.id_parque === id);
+  if (!p) return;
+  const abierto = estaAbiertoAhora(p);
+  parqueViendoId = id;
+  document.getElementById("detalle-contenido").innerHTML = `
+    <div class="detalle-item"><label>ID</label><p>#${p.id_parque}</p></div>
+    <div class="detalle-item"><label>Nombre</label><p>${escapeHtml(p.nombre)}</p></div>
+    <div class="detalle-item"><label>Zona</label><p>${escapeHtml(p.nombre_zona || "Sin zona")}</p></div>
+    <div class="detalle-item"><label>Estado</label><p><span class="badge ${abierto ? "abierto" : "cerrado"}">${abierto ? "Abierto" : "Cerrado"}</span></p></div>
+    <div class="detalle-item"><label>Horario</label><p>${escapeHtml(horarioTexto(p))}</p></div>
+    <div class="detalle-item"><label>Control manual</label><p>${estaHabilitadoManual(p) ? "Habilitado" : "Cerrado manual"}</p></div>
+    <div class="detalle-item"><label>Latitud</label><p>${escapeHtml(p.latitud)}</p></div>
+    <div class="detalle-item"><label>Longitud</label><p>${escapeHtml(p.longitud)}</p></div>
+    <div class="detalle-item"><label>Altitud</label><p>${p.altitud ? `${escapeHtml(p.altitud)} m` : "Sin dato"}</p></div>
+    <div class="detalle-item detalle-full"><label>Descripcion</label><p>${escapeHtml(p.descripcion || "Sin descripcion registrada.")}</p></div>
+  `;
+  document.getElementById("overlay-ver").classList.add("activo");
+  setTimeout(() => {
+    if (mapaDetalle) { mapaDetalle.remove(); mapaDetalle = null; }
+    mapaDetalle = L.map("mapa-detalle").setView([p.latitud, p.longitud], 15);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mapaDetalle);
+    L.marker([p.latitud, p.longitud]).addTo(mapaDetalle).bindPopup(`<b>${escapeHtml(p.nombre)}</b><br>${escapeHtml(horarioTexto(p))}`).openPopup();
+  }, 150);
+}
+
+function editarDesdeDetalle() { cerrarModales(); setTimeout(() => abrirModalEditar(parqueViendoId), 100); }
+
+function abrirModalNuevo() {
+  parqueEditando = null;
+  document.getElementById("titulo-form").textContent = "➕ Nuevo Parque";
+  ["f-nombre","f-descripcion","f-altitud","f-latitud","f-longitud"].forEach(id => document.getElementById(id).value = "");
+  document.getElementById("f-hora-apertura").value = "06:00";
+  document.getElementById("f-hora-cierre").value = "20:00";
+  document.getElementById("f-zona").value = "";
+  document.getElementById("overlay-form").classList.add("activo");
+  iniciarMiniMapa(-17.3895, -66.1568); // Centro Cochabamba
+}
+
+function abrirModalEditar(id) {
+  const p = parques.find(x => x.id_parque === id); if (!p) return;
+  parqueEditando = p;
+  document.getElementById("titulo-form").textContent = "✏️ Editar Parque";
+  document.getElementById("f-nombre").value      = p.nombre || "";
+  document.getElementById("f-descripcion").value = p.descripcion || "";
+  document.getElementById("f-altitud").value     = p.altitud || "";
+  document.getElementById("f-latitud").value     = p.latitud || "";
+  document.getElementById("f-longitud").value    = p.longitud || "";
+  document.getElementById("f-hora-apertura").value = p.hora_apertura || "06:00";
+  document.getElementById("f-hora-cierre").value   = p.hora_cierre || "20:00";
+  document.getElementById("f-zona").value        = p.id_zona || "";
+  document.getElementById("overlay-form").classList.add("activo");
+  iniciarMiniMapa(parseFloat(p.latitud), parseFloat(p.longitud));
+}
+
+function iniciarMiniMapa(lat, lng) {
+  setTimeout(() => {
+    if (miniMapa) { miniMapa.remove(); miniMapa = null; miniMarcador = null; }
+    miniMapa = L.map("mini-mapa").setView([lat, lng], 14);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(miniMapa);
+    if (parqueEditando) miniMarcador = L.marker([lat, lng]).addTo(miniMapa);
+    miniMapa.on("click", e => {
+      const { lat, lng } = e.latlng;
+      document.getElementById("f-latitud").value  = lat.toFixed(7);
+      document.getElementById("f-longitud").value = lng.toFixed(7);
+      if (miniMarcador) miniMarcador.setLatLng([lat, lng]);
+      else miniMarcador = L.marker([lat, lng]).addTo(miniMapa);
+    });
+  }, 150);
+}
+
+// ════════════════════════════════════════════════════
+//  GUARDAR
+// ════════════════════════════════════════════════════
+async function guardarParque() {
+  const inputNombre = document.getElementById("f-nombre");
+  inputNombre.value = limpiarNombre(inputNombre.value).trim();
+  const nombre      = inputNombre.value;
+  const descripcion = document.getElementById("f-descripcion").value.trim();
+  const id_zona     = document.getElementById("f-zona").value;
+  const altitud     = document.getElementById("f-altitud").value;
+  const hora_apertura = document.getElementById("f-hora-apertura").value || "06:00";
+  const hora_cierre   = document.getElementById("f-hora-cierre").value || "20:00";
+  const latitud     = parseFloat(document.getElementById("f-latitud").value);
+  const longitud    = parseFloat(document.getElementById("f-longitud").value);
+
+  if (!nombre)                          return toast("⚠️ El nombre es obligatorio", true);
+  if (!nombreValido(nombre))            return toast("⚠️ El nombre solo debe contener letras y espacios", true);
+  if (!id_zona)                         return toast("⚠️ Selecciona una zona", true);
+  if (isNaN(latitud) || isNaN(longitud)) return toast("⚠️ Haz clic en el mapa para ubicar el parque", true);
+
+  const data = { nombre, descripcion, id_zona: parseInt(id_zona), latitud, longitud, altitud: altitud ? parseFloat(altitud) : null, hora_apertura, hora_cierre };
+  const btn  = document.getElementById("btn-guardar");
+  btn.disabled = true; btn.textContent = "Guardando...";
+
+  try {
+    let json;
+    if (parqueEditando) {
+      json = await apiFetch(`/parques/${parqueEditando.id_parque}`, { method: "PUT", body: JSON.stringify(data) });
+      if (!json?.success) throw new Error(json?.message || "Error al actualizar");
+      const idx = parques.findIndex(p => p.id_parque === parqueEditando.id_parque);
+      parques[idx] = { ...parques[idx], ...json.data };
+      toast("✅ Parque actualizado");
+    } else {
+      json = await apiFetch("/parques", { method: "POST", body: JSON.stringify(data) });
+      if(!json.ok) throw new Error(json?.message || "Error al crear");
+      parques.unshift(json.data);
+      toast("✅ Parque creado");
+    }
+    filtrados = [...parques]; renderTabla();
+    document.getElementById("badge-total").textContent = `${parques.length} parques`;
+    cerrarModales();
+  } catch (e) {
+    toast("❌ " + e.message, true);
+  } finally {
+    btn.disabled = false; btn.textContent = "Guardar";
+  }
+}
+
+async function cambiarEstado(id){
+
+  try{
+
+    await apiFetch(
+
+      `/parques/${id}/estado`,
+
+      {
+        method:"PATCH"
+      }
+    );
+
+    await cargarParques();
+
+    toast(
+      "✅ Estado actualizado"
+    );
+
+  }
+
+  catch(error){
+
+    console.log(error);
+
+    toast(
+      "❌ Error actualizando estado",
+      true
+    );
+  }
+}
+
+function pedirBorrar(id) {
+  const p = parques.find(x => x.id_parque === id); if (!p) return;
+  parqueBorrando = p;
+  document.getElementById("nombre-a-borrar").textContent = `"${p.nombre}"`;
+  document.getElementById("overlay-borrar").classList.add("activo");
+}
+
+async function confirmarBorrar(){
+
+  if(!parqueBorrando) return;
+
+  try{
+
+    const res = await fetch(
+
+      `/api/parques/${parqueBorrando.id_parque}`,
+
+      {
+        method:"DELETE"
+      }
+    );
+
+    const json =
+    await res.json();
+
+    /*
+    ERROR FK
+    */
+
+    if(!json.ok){
+
+      return toast(
+        json.error,
+        true
+      );
+    }
+
+    parques = parques.filter(
+
+      p =>
+
+      p.id_parque !==
+      parqueBorrando.id_parque
+    );
+
+    filtrados = [...parques];
+
+    renderTabla();
+
+    cerrarModales();
+
+    toast(
+      "🗑 Parque eliminado"
+    );
+
+  }
+
+  catch(error){
+
+    console.log(error);
+
+    toast(
+      "❌ Error eliminando",
+      true
+    );
+  }
+}
+
+
+
+function cerrarModales() {
+  document.querySelectorAll(".overlay").forEach(o => o.classList.remove("activo"));
+  parqueEditando = parqueBorrando = null;
+}
+
+let _tt;
+function toast(msg, error = false) {
+  const el = document.getElementById("toast");
+  el.textContent = msg; el.className = `toast ${error ? "error" : ""} visible`;
+  clearTimeout(_tt); _tt = setTimeout(() => el.classList.remove("visible"), 3500);
+}
+
+document.querySelectorAll(".overlay").forEach(o => {
+  o.addEventListener("click", e => { if (e.target === o) cerrarModales(); });
+});
+</script>
+
+
+
+
+
+
+</body>
+</html>

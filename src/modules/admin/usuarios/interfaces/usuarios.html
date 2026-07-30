@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Usuarios</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Raleway:wght@300;500;700;900&family=IBM+Plex+Mono:wght@400;600&display=swap');
+    :root{--g900:#0a1a0a;--g800:#112211;--g700:#1a3a1a;--g600:#2d5a2d;--g500:#3d7a3d;--g400:#4caf50;--g300:#7ecb82;--g200:#b8e6ba;--crema:#f5f0e8;--rojo:#e53935}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Raleway',sans-serif;background:var(--g900);color:var(--crema);min-height:100vh}
+    .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;background:linear-gradient(90deg,#071407,#122212);border-bottom:2px solid var(--g400);position:sticky;top:0;z-index:100}
+    .topbar-left{display:flex;align-items:center;gap:14px}
+    .topbar h1{font-size:1.25rem;font-weight:900;color:var(--g200)}
+    .badge-total{font-family:'IBM Plex Mono',monospace;font-size:.72rem;background:var(--g600);color:var(--g200);padding:3px 12px;border-radius:20px;border:1px solid var(--g400)}
+    .btn-nuevo{display:flex;align-items:center;gap:8px;padding:9px 20px;background:var(--g400);color:#fff;border:none;border-radius:8px;font-family:'Raleway',sans-serif;font-weight:700;font-size:.85rem;cursor:pointer;transition:.2s}
+    .btn-nuevo:hover{background:var(--g300);transform:translateY(-1px)}
+    .main{max-width:1340px;margin:0 auto;padding:28px 20px}
+    .filtros{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+    .input-buscar,.select-filtro{padding:10px 16px;background:var(--g800);border:1px solid var(--g600);border-radius:8px;color:var(--crema);font-family:'Raleway',sans-serif;font-size:.9rem;outline:none}
+    .input-buscar{flex:1;min-width:180px}.input-buscar::placeholder{color:#5a8a5a}
+    .input-buscar:focus,.select-filtro:focus{border-color:var(--g400)}
+    .select-filtro option{background:var(--g800)}
+    .users-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(275px,1fr));gap:14px}
+    .user-card{min-height:215px;background:linear-gradient(180deg,#102210,#0c1b0c);border:1px solid var(--g700);border-radius:10px;padding:16px;display:grid;gap:13px;box-shadow:0 4px 24px rgba(0,0,0,.28);transition:.18s}
+    .user-card:hover{border-color:var(--g500);transform:translateY(-2px)}
+    .user-head{display:flex;gap:12px;align-items:center;min-width:0}
+    .user-avatar{width:44px;height:44px;border-radius:10px;background:var(--g600);border:1px solid var(--g400);display:grid;place-items:center;color:#fff;font-weight:900;font-size:1.1rem;flex:0 0 auto}
+    .user-name{font-weight:900;color:var(--g200);line-height:1.25;overflow:hidden;text-overflow:ellipsis}
+    .user-email{margin-top:4px;color:var(--g300);font-family:'IBM Plex Mono',monospace;font-size:.76rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .user-meta{display:flex;gap:7px;flex-wrap:wrap}
+    .user-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}
+    .tabla-wrapper{background:var(--g800);border:1px solid var(--g700);border-radius:14px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.35)}
+    table{width:100%;border-collapse:collapse}
+    thead{background:linear-gradient(90deg,#0d200d,#162816);border-bottom:2px solid var(--g600)}
+    th{padding:14px 18px;text-align:left;font-size:.72rem;font-weight:700;color:var(--g300);text-transform:uppercase;letter-spacing:1.5px;font-family:'IBM Plex Mono',monospace;white-space:nowrap}
+    tbody tr{border-bottom:1px solid #1f3a1f;transition:background .15s}
+    tbody tr:last-child{border-bottom:none}
+    tbody tr:hover{background:#172e17}
+    td{padding:13px 18px;font-size:.875rem;vertical-align:middle}
+    .td-id{font-family:'IBM Plex Mono',monospace;font-size:.75rem;color:var(--g300)}
+    .td-nombre{font-weight:700}
+    .td-email{font-size:.8rem;color:var(--g200);font-family:'IBM Plex Mono',monospace}
+    .badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:.68rem;font-weight:700;text-transform:uppercase;white-space:nowrap}
+    .badge.admin  {background:#1a2a4a;color:#7ac8ff;border:1px solid #2a5a8a}
+    .badge.gestor {background:#2a1a4a;color:#c87aff;border:1px solid #5a2a8a}
+    .badge.usuario{background:#1a3a1a;color:#7eff82;border:1px solid #3a7a3a}
+    .badge.activo  {background:#1a4a1a;color:#7eff82;border:1px solid #3a7a3a}
+    .badge.inactivo{background:#4a1a1a;color:#ff8a8a;border:1px solid #7a3a3a}
+    .acciones{display:flex;gap:7px}
+    .btn-accion{padding:6px 12px;border:none;border-radius:6px;font-family:'Raleway',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;transition:.2s}
+    .btn-editar  {background:#3a3a1a;color:#ffe07a;border:1px solid #6a6a1a}.btn-editar:hover{background:#4a4a1a}
+    .btn-toggle-u{background:#2a2a1a;color:#ffaa7a;border:1px solid #6a4a1a}.btn-toggle-u:hover{background:#3a3a1a}
+    .sin-datos{text-align:center;padding:60px 20px;color:#5a8a5a;font-size:.9rem}
+    .sin-datos .icono{font-size:3rem;margin-bottom:12px}
+    .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;backdrop-filter:blur(4px);align-items:center;justify-content:center}
+    .overlay.activo{display:flex}
+    .modal{background:var(--g800);border:1px solid var(--g500);border-radius:16px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.6);animation:slideUp .25s ease}
+    @keyframes slideUp{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+    .modal-header{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--g700);background:linear-gradient(90deg,#0d200d,#162816);border-radius:16px 16px 0 0}
+    .modal-titulo{font-size:1.05rem;font-weight:800;color:var(--g200)}
+    .btn-cerrar{background:none;border:none;color:#7a9a7a;font-size:1.4rem;cursor:pointer;line-height:1}
+    .btn-cerrar:hover{color:var(--rojo)}
+    .modal-body{padding:24px}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .form-full{grid-column:1/-1}
+    .campo label{display:block;font-size:.75rem;font-weight:700;color:var(--g300);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;font-family:'IBM Plex Mono',monospace}
+    .campo input,.campo select{width:100%;padding:10px 14px;background:var(--g700);border:1px solid var(--g600);border-radius:8px;color:var(--crema);font-family:'Raleway',sans-serif;font-size:.9rem;outline:none;transition:border-color .2s}
+    .campo input:focus,.campo select:focus{border-color:var(--g400)}
+    .campo select option{background:var(--g700)}
+    .modal-footer{display:flex;justify-content:flex-end;gap:10px;padding:16px 24px;border-top:1px solid var(--g700)}
+    .btn-cancelar{padding:10px 22px;background:transparent;border:1px solid var(--g600);border-radius:8px;color:#8aaa8a;font-family:'Raleway',sans-serif;font-weight:700;cursor:pointer}
+    .btn-cancelar:hover{background:var(--g700)}
+    .btn-guardar{padding:10px 28px;background:var(--g400);border:none;border-radius:8px;color:#fff;font-family:'Raleway',sans-serif;font-weight:700;cursor:pointer}
+    .btn-guardar:hover{background:var(--g300)}.btn-guardar:disabled{opacity:.5;cursor:not-allowed}
+    .toast{position:fixed;bottom:28px;right:28px;background:var(--g700);border:1px solid var(--g400);border-radius:10px;padding:14px 20px;font-size:.875rem;font-weight:600;color:var(--g200);z-index:999;transform:translateY(20px);opacity:0;transition:.3s;max-width:320px}
+    .toast.visible{transform:translateY(0);opacity:1}.toast.error{border-color:var(--rojo);color:#ff8a8a}
+  </style>
+  <link rel="stylesheet" href="/css/system-responsive.css">
+  <script src="/js/system-form-helpers.js" defer></script>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <span style="font-size:1.5rem">👥</span>
+    <h1>Gestión de Usuarios</h1>
+    <span class="badge-total" id="badge-total">Cargando...</span>
+  </div>
+  <button class="btn-nuevo" onclick="abrirModalNuevo()">＋ Nuevo Usuario</button>
+</div>
+
+<div class="main">
+  <div class="filtros">
+    <input class="input-buscar" id="buscar" type="text" list="sugerencias-buscar-usuarios" maxlength="80" autocomplete="off"
+           placeholder="🔍 Buscar por nombre o email..." oninput="filtrar()"/>
+    <datalist id="sugerencias-buscar-usuarios"></datalist>
+    <select class="select-filtro" id="filtro-rol" onchange="filtrar()">
+      <option value="">Todos los roles</option>
+      <option value="1">Administrador</option>
+      <option value="2">Gestor</option>
+      <option value="3">Usuario</option>
+    </select>
+    <select class="select-filtro" id="filtro-estado" onchange="filtrar()">
+      <option value="">Todos los estados</option>
+      <option value="1">✅ Activos</option>
+      <option value="0">❌ Inactivos</option>
+    </select>
+  </div>
+
+  <div class="users-grid" id="usersGrid"></div>
+</div>
+
+<!-- MODAL CREAR / EDITAR -->
+<div class="overlay" id="overlay-form">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-titulo" id="titulo-form">Nuevo Usuario</span>
+      <button class="btn-cerrar" onclick="cerrarModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="campo">
+          <label>Nombre *</label>
+          <input type="text" id="f-nombre" maxlength="60" data-validate="name" placeholder="Nombre"/>
+        </div>
+        <div class="campo">
+          <label>Apellido paterno *</label>
+          <input type="text" id="f-apellido-paterno" maxlength="60" data-validate="name" placeholder="Apellido paterno"/>
+        </div>
+        <div class="campo form-full">
+          <label>Apellido materno *</label>
+          <input type="text" id="f-apellido-materno" maxlength="60" data-validate="name" placeholder="Apellido materno"/>
+        </div>
+        <div class="campo form-full">
+          <label>Email *</label>
+          <input type="email" id="f-email" maxlength="120" placeholder="correo@ejemplo.com"/>
+        </div>
+        <div class="campo form-full" id="password-field">
+          <label>Contraseña inicial *</label>
+          <input type="password" id="f-password" minlength="8" maxlength="72" placeholder="••••••"/>
+        </div>
+        <div class="campo form-full">
+          <label>Rol *</label>
+          <select id="f-rol">
+            <option value="1">Administrador</option>
+            <option value="2">Gestor</option>
+            <option value="3" selected>Usuario</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancelar" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn-guardar" id="btn-guardar" onclick="guardarUsuario()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script>
+
+const API = "/api/usuarios";
+const authHead = () => ({
+  "Authorization": `Bearer ${localStorage.getItem("token") || ""}`,
+  "Content-Type":"application/json"
+});
+
+const ROLES = {
+
+  1:"Administrador",
+
+  2:"Gestor",
+
+  3:"Usuario"
+};
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function normalizarBusqueda(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function limpiarNombre(value, max = 60) {
+  return String(value || "")
+    .replace(/[^\p{L}\s'-]/gu, "")
+    .replace(/\s{2,}/g, " ")
+    .slice(0, max);
+}
+
+function limpiarBusquedaUsuario(value) {
+  return String(value || "")
+    .replace(/[<>`{}[\]\\]/g, "")
+    .replace(/\s{2,}/g, " ")
+    .slice(0, 80);
+}
+
+function nombreValido(value) {
+  return /^[\p{L}][\p{L}\s'-]{1,59}$/u.test(String(value || "").trim());
+}
+
+function emailValido(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(value || "").trim());
+}
+
+function nombreCompletoUsuario(u) {
+  return [u.nombre, u.apellido_paterno, u.apellido_materno].filter(Boolean).join(" ");
+}
+
+function actualizarSugerenciasBusquedaUsuarios(query = normalizarBusqueda(document.getElementById("buscar")?.value)) {
+  const datalist = document.getElementById("sugerencias-buscar-usuarios");
+  if (!datalist) return;
+
+  const vistos = new Set();
+  const sugerencias = [];
+
+  usuarios.forEach(u => {
+    [nombreCompletoUsuario(u), u.email].filter(Boolean).forEach(value => {
+      const texto = String(value).trim();
+      const key = normalizarBusqueda(texto);
+      if (!texto || vistos.has(key)) return;
+      if (query && !key.startsWith(query) && !key.includes(query)) return;
+      vistos.add(key);
+      sugerencias.push({ texto, starts: !query || key.startsWith(query) });
+    });
+  });
+
+  sugerencias.sort((a, b) => Number(b.starts) - Number(a.starts) || a.texto.localeCompare(b.texto, "es"));
+  datalist.innerHTML = sugerencias.slice(0, 10).map(item => `<option value="${escapeHtml(item.texto)}"></option>`).join("");
+}
+
+function prepararValidacionUsuarios() {
+  ["f-nombre", "f-apellido-paterno", "f-apellido-materno"].forEach(id => {
+    const input = document.getElementById(id);
+    input?.addEventListener("input", () => {
+      const limpio = limpiarNombre(input.value);
+      if (input.value !== limpio) input.value = limpio;
+    });
+  });
+}
+
+let usuarios = [];
+
+let filtrados = [];
+
+let editandoId = null;
+
+/*
+INICIO
+*/
+
+document.addEventListener("DOMContentLoaded", () => {
+  prepararValidacionUsuarios();
+  cargarUsuarios();
+});
+
+/*
+CARGAR USUARIOS
+*/
+
+async function cargarUsuarios(){
+
+  document.getElementById("usersGrid").innerHTML =
+
+  `
+  <tr>
+    <td colspan="6"
+        style="
+          text-align:center;
+          padding:40px;
+          color:#5a8a5a;
+          font-family:'IBM Plex Mono',monospace
+        ">
+
+      Cargando...
+
+    </td>
+  </tr>
+  `;
+
+  try{
+
+    const res =
+    await fetch(`${API}`, { headers: authHead() });
+
+    const data =
+    await res.json();
+
+    usuarios = data;
+
+    filtrados = [...usuarios];
+
+    actualizarSugerenciasBusquedaUsuarios("");
+
+    renderTabla();
+
+    document.getElementById(
+      "badge-total"
+    ).textContent =
+    `${usuarios.length} usuarios`;
+
+  }
+
+  catch(error){
+
+    console.log(error);
+
+    mostrarError(
+
+      "⚠️ No se pudo conectar al servidor Node.js"
+    );
+
+    document.getElementById(
+      "badge-total"
+    ).textContent = "Error";
+  }
+}
+
+/*
+ERROR TABLA
+*/
+
+function mostrarError(msg){
+
+  document.getElementById("tbody")
+  .innerHTML =
+
+  `
+  <tr>
+
+    <td colspan="6">
+
+      <div class="sin-datos">
+
+        <div class="icono">
+          ⚠️
+        </div>
+
+        ${msg}
+
+      </div>
+
+    </td>
+
+  </tr>
+  `;
+}
+
+/*
+RENDER TABLA
+*/
+
+function renderTabla(){
+
+  const tbody =
+  document.getElementById("tbody");
+
+  if(!filtrados.length){
+
+    tbody.innerHTML =
+
+    `
+    <tr>
+
+      <td colspan="6">
+
+        <div class="sin-datos">
+
+          <div class="icono">
+            👥
+          </div>
+
+          No se encontraron usuarios
+
+        </div>
+
+      </td>
+
+    </tr>
+    `;
+
+    return;
+  }
+
+  const claseRol = {
+
+    1:"admin",
+
+    2:"gestor",
+
+    3:"usuario"
+  };
+
+  tbody.innerHTML = filtrados.map(u => `
+
+    <tr>
+
+      <td class="td-id">
+
+        #${u.id_usuario}
+
+      </td>
+
+      <td class="td-nombre">
+
+        👤 ${u.nombre}
+        ${u.apellido_paterno || ""}
+        ${u.apellido_materno || ""}
+
+      </td>
+
+      <td class="td-email">
+
+        ${u.email}
+
+      </td>
+
+      <td>
+
+        <span class="badge ${claseRol[u.id_rol] || "usuario"}">
+
+          ${ROLES[u.id_rol] || "—"}
+
+        </span>
+
+      </td>
+
+      <td>
+
+        <span class="badge ${u.activo == 1 ? "activo":"inactivo"}">
+
+          ${u.activo == 1
+            ? "✅ Activo"
+            : "❌ Inactivo"}
+
+        </span>
+
+      </td>
+
+      <td>
+
+        <div class="acciones">
+
+          <button
+            class="btn-accion btn-editar"
+
+            onclick="abrirModalEditar(${u.id_usuario})"
+          >
+
+            ✏️ Editar
+
+          </button>
+
+          <button
+            class="btn-accion btn-toggle-u"
+
+            onclick="toggleUsuario(${u.id_usuario})"
+          >
+
+            ${u.activo == 1
+              ? "🔒 Desactivar"
+              : "🔓 Activar"}
+
+          </button>
+
+        </div>
+
+      </td>
+
+    </tr>
+
+  `).join("");
+}
+
+function mostrarError(msg){
+  document.getElementById("usersGrid").innerHTML =
+    `<div class="sin-datos" style="grid-column:1/-1"><div class="icono">⚠️</div>${escapeHtml(msg)}</div>`;
+}
+
+function renderTabla(){
+  const grid = document.getElementById("usersGrid");
+
+  if(!filtrados.length){
+    grid.innerHTML = `<div class="sin-datos" style="grid-column:1/-1"><div class="icono">👥</div>No se encontraron usuarios</div>`;
+    return;
+  }
+
+  const claseRol = { 1:"admin", 2:"gestor", 3:"usuario" };
+
+  grid.innerHTML = filtrados.map(u => {
+    const nombre = nombreCompletoUsuario(u) || "Usuario sin nombre";
+    const inicial = String(u.nombre || u.email || "U").trim().charAt(0).toUpperCase();
+    return `
+      <article class="user-card">
+        <div class="user-head">
+          <div class="user-avatar">${escapeHtml(inicial)}</div>
+          <div style="min-width:0">
+            <div class="user-name">${escapeHtml(nombre)}</div>
+            <div class="user-email">${escapeHtml(u.email || "Sin correo")}</div>
+          </div>
+        </div>
+        <div class="user-meta">
+          <span class="badge ${claseRol[u.id_rol] || "usuario"}">${escapeHtml(ROLES[u.id_rol] || "—")}</span>
+          <span class="badge ${u.activo == 1 ? "activo":"inactivo"}">${u.activo == 1 ? "Activo" : "Inactivo"}</span>
+          <span class="badge usuario">#${escapeHtml(u.id_usuario)}</span>
+        </div>
+        <div class="user-actions">
+          <button class="btn-accion btn-editar" onclick="abrirModalEditar(${u.id_usuario})">Editar</button>
+          <button class="btn-accion btn-toggle-u" onclick="toggleUsuario(${u.id_usuario})">${u.activo == 1 ? "Desactivar" : "Activar"}</button>
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+
+/*
+FILTROS
+*/
+
+function filtrar(){
+
+  const buscador = document.getElementById("buscar");
+  const limpio = limpiarBusquedaUsuario(buscador.value);
+  if (buscador.value !== limpio) buscador.value = limpio;
+  const q = normalizarBusqueda(limpio);
+
+  const rol =
+
+  document
+  .getElementById("filtro-rol")
+  .value;
+
+  const est =
+
+  document
+  .getElementById("filtro-estado")
+  .value;
+
+  const resultados = [];
+
+  usuarios.forEach(u => {
+
+    const valores = [nombreCompletoUsuario(u), u.email || ""].map(normalizarBusqueda);
+    const matchQ = !q || valores.some(value => value.includes(q));
+    const starts = q && valores.some(value => value.startsWith(q));
+
+    const matchR =
+
+      !rol ||
+
+      String(u.id_rol) === rol;
+
+    const matchE =
+
+      est === ""
+
+      ||
+
+      String(u.activo) === est;
+
+    if (matchQ && matchR && matchE) {
+      resultados.push({ u, score: starts ? 0 : 1 });
+    }
+  });
+
+  filtrados = q
+    ? resultados.sort((a, b) => a.score - b.score || nombreCompletoUsuario(a.u).localeCompare(nombreCompletoUsuario(b.u), "es")).map(item => item.u)
+    : resultados.map(item => item.u);
+
+  actualizarSugerenciasBusquedaUsuarios(q);
+
+  renderTabla();
+}
+
+/*
+ABRIR MODAL NUEVO
+*/
+
+function abrirModalNuevo(){
+
+  editandoId = null;
+  document.getElementById("password-field").style.display = "";
+
+  document.getElementById(
+    "titulo-form"
+  ).textContent =
+
+  "➕ Nuevo Usuario";
+
+  [
+    "f-nombre",
+    "f-apellido-paterno",
+    "f-apellido-materno",
+    "f-email",
+    "f-password"
+  ]
+
+  .forEach(id => {
+
+    document.getElementById(id)
+    .value = "";
+  });
+
+  document.getElementById(
+    "f-rol"
+  ).value = "3";
+
+  document.getElementById(
+    "overlay-form"
+  ).classList.add("activo");
+}
+
+/*
+EDITAR
+*/
+
+function abrirModalEditar(id){
+
+  const u =
+  usuarios.find(x =>
+    x.id_usuario === id
+  );
+
+  if(!u) return;
+
+  editandoId = id;
+  document.getElementById("password-field").style.display = "none";
+
+  document.getElementById(
+    "titulo-form"
+  ).textContent =
+
+  "✏️ Editar Usuario";
+
+  document.getElementById(
+    "f-nombre"
+  ).value = u.nombre || "";
+
+  document.getElementById(
+    "f-apellido-paterno"
+  ).value =
+  u.apellido_paterno || "";
+
+  document.getElementById(
+    "f-apellido-materno"
+  ).value =
+  u.apellido_materno || "";
+
+  document.getElementById(
+    "f-email"
+  ).value =
+  u.email || "";
+
+  document.getElementById(
+    "f-password"
+  ).value = "";
+
+  document.getElementById(
+    "f-rol"
+  ).value =
+  u.id_rol || "3";
+
+  document.getElementById(
+    "overlay-form"
+  ).classList.add("activo");
+}
+
+/*
+GUARDAR
+*/
+
+async function guardarUsuario(){
+
+  const inputNombre = document.getElementById("f-nombre");
+  const inputPaterno = document.getElementById("f-apellido-paterno");
+  const inputMaterno = document.getElementById("f-apellido-materno");
+
+  inputNombre.value = limpiarNombre(inputNombre.value).trim();
+  inputPaterno.value = limpiarNombre(inputPaterno.value).trim();
+  inputMaterno.value = limpiarNombre(inputMaterno.value).trim();
+
+  const nombre = inputNombre.value;
+
+  const apellido_paterno =
+
+  inputPaterno.value;
+
+  const apellido_materno =
+
+  inputMaterno.value;
+
+  const email =
+
+  document
+  .getElementById("f-email")
+  .value
+  .trim();
+
+  const password =
+
+  document
+  .getElementById("f-password")
+  .value;
+
+  const rol =
+
+  document
+  .getElementById("f-rol")
+  .value;
+
+  if(!nombre){
+
+    return toast(
+      "⚠️ Nombre obligatorio",
+      true
+    );
+  }
+
+  if(!nombreValido(nombre)){
+
+    return toast(
+      "⚠️ El nombre solo debe contener letras y espacios",
+      true
+    );
+  }
+
+  if(!apellido_paterno || !apellido_materno){
+
+    return toast(
+      "⚠️ Apellido paterno y materno obligatorios",
+      true
+    );
+  }
+
+  if(!nombreValido(apellido_paterno) || !nombreValido(apellido_materno)){
+
+    return toast(
+      "⚠️ Los apellidos solo deben contener letras y espacios",
+      true
+    );
+  }
+
+  if(!email){
+
+    return toast(
+      "⚠️ Email obligatorio",
+      true
+    );
+  }
+
+  if(!emailValido(email)){
+
+    return toast(
+      "⚠️ Ingresa un email válido",
+      true
+    );
+  }
+
+  if(!editandoId && !password){
+
+    return toast(
+      "⚠️ La contraseña es obligatoria para crear usuarios",
+      true
+    );
+  }
+
+  if(!editandoId && !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,72}$/.test(password)){
+
+    return toast(
+      "⚠️ La contraseña debe tener mayúscula, minúscula, número y símbolo",
+      true
+    );
+  }
+
+  const data = {
+
+    id:editandoId,
+
+    nombre,
+
+    apellido_paterno,
+
+    apellido_materno,
+
+    email,
+
+    rol
+  };
+
+  if(!editandoId){
+    data.password = password;
+  }
+
+  const url = editandoId
+
+    ? `${API}/update`
+
+    : `${API}/create`;
+
+  const btn =
+
+  document.getElementById(
+    "btn-guardar"
+  );
+
+  btn.disabled = true;
+
+  btn.textContent =
+  "Guardando...";
+
+  try{
+
+    const res = await fetch(
+
+      url,
+
+      {
+
+        method:"POST",
+
+        headers: authHead(),
+
+        body: JSON.stringify(data)
+      }
+    );
+
+    const json =
+    await res.json();
+
+    if(!json.ok){
+
+      throw new Error(
+        json.error
+      );
+    }
+
+    toast(
+
+      editandoId
+
+      ? "✅ Usuario actualizado"
+
+      : "✅ Usuario creado"
+    );
+
+    cerrarModal();
+
+    await cargarUsuarios();
+
+  }
+
+  catch(error){
+
+    console.log(error);
+
+    toast(
+      "❌ " + error.message,
+      true
+    );
+  }
+
+  finally{
+
+    btn.disabled = false;
+
+    btn.textContent =
+    "Guardar";
+  }
+}
+
+/*
+ACTIVAR/DESACTIVAR
+*/
+
+async function toggleUsuario(id){
+
+  try{
+
+    await fetch(
+
+      `${API}/toggle`,
+
+      {
+
+        method:"POST",
+
+        headers: authHead(),
+
+        body: JSON.stringify({
+          id
+        })
+      }
+    );
+
+    await cargarUsuarios();
+
+    toast(
+      "🔄 Estado actualizado"
+    );
+
+  }
+
+  catch(error){
+
+    console.log(error);
+
+    toast(
+      "❌ Error cambiando estado",
+      true
+    );
+  }
+}
+
+/*
+CERRAR MODAL
+*/
+
+function cerrarModal(){
+
+  document.getElementById(
+    "overlay-form"
+  ).classList.remove("activo");
+
+  editandoId = null;
+}
+
+/*
+TOAST
+*/
+
+let _tt;
+
+function toast(msg,error=false){
+
+  const el =
+  document.getElementById(
+    "toast"
+  );
+
+  el.textContent = msg;
+
+  el.className =
+
+  `toast ${error ? "error":""} visible`;
+
+  clearTimeout(_tt);
+
+  _tt = setTimeout(()=>{
+
+    el.classList.remove(
+      "visible"
+    );
+
+  },3500);
+}
+
+/*
+CLICK OUTSIDE
+*/
+
+document
+.getElementById("overlay-form")
+.addEventListener("click",(e)=>{
+
+  if(
+
+    e.target ===
+
+    document.getElementById(
+      "overlay-form"
+    )
+
+  ){
+
+    cerrarModal();
+  }
+});
+
+</script>
+</body>
+</html>

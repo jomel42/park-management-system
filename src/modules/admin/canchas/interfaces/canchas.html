@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gestión de Canchas</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Raleway:wght@300;500;700;900&family=IBM+Plex+Mono:wght@400;600&display=swap');
+    :root{--g900:#0a1a0a;--g800:#112211;--g700:#1a3a1a;--g600:#2d5a2d;--g500:#3d7a3d;--g400:#4caf50;--g300:#7ecb82;--g200:#b8e6ba;--crema:#f5f0e8;--rojo:#e53935}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Raleway',sans-serif;background:var(--g900);color:var(--crema);min-height:100vh}
+    .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;background:linear-gradient(90deg,#071407,#122212);border-bottom:2px solid var(--g400);position:sticky;top:0;z-index:100}
+    .topbar-left{display:flex;align-items:center;gap:14px}
+    .topbar h1{font-size:1.25rem;font-weight:900;color:var(--g200)}
+    .badge-total{font-family:'IBM Plex Mono',monospace;font-size:.72rem;background:var(--g600);color:var(--g200);padding:3px 12px;border-radius:20px;border:1px solid var(--g400)}
+    .btn-nuevo{display:flex;align-items:center;gap:8px;padding:9px 20px;background:var(--g400);color:#fff;border:none;border-radius:8px;font-family:'Raleway',sans-serif;font-weight:700;font-size:.85rem;cursor:pointer;transition:.2s}
+    .btn-nuevo:hover{background:var(--g300);transform:translateY(-1px)}
+    .main{max-width:1100px;margin:0 auto;padding:28px 20px}
+    .filtros{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+    .input-buscar,.select-filtro{padding:10px 16px;background:var(--g800);border:1px solid var(--g600);border-radius:8px;color:var(--crema);font-family:'Raleway',sans-serif;font-size:.9rem;outline:none}
+    .input-buscar{flex:1;min-width:180px}.input-buscar::placeholder{color:#5a8a5a}
+    .input-buscar:focus,.select-filtro:focus{border-color:var(--g400)}
+    .select-filtro option{background:var(--g800)}
+    .cards-wrapper{background:rgba(17,34,17,.78);border:1px solid var(--g700);border-radius:8px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.35)}
+    .cards-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;padding:18px}
+    .admin-card{min-height:235px;border:1px solid var(--g700);border-radius:8px;background:linear-gradient(180deg,#132613,#0d1d0d);padding:17px;display:grid;gap:13px;cursor:pointer;transition:.2s}
+    .admin-card:hover{border-color:rgba(126,203,130,.58);transform:translateY(-2px);box-shadow:0 12px 28px rgba(0,0,0,.28)}
+    .card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+    .card-title h3{font-size:1rem;color:var(--crema);line-height:1.25}
+    .card-title span{display:block;margin-top:5px;color:var(--g300);font-family:'IBM Plex Mono',monospace;font-size:.72rem}
+    .status-circle{width:76px;height:76px;border-radius:50%;display:grid;place-items:center;text-align:center;padding:8px;border:2px solid;font-size:.61rem;font-weight:900;text-transform:uppercase;letter-spacing:.04em;line-height:1.1;flex:0 0 auto}
+    .status-circle.disponible{background:rgba(76,175,80,.14);border-color:#6dda76;color:#91f59a;box-shadow:0 0 0 8px rgba(76,175,80,.08)}
+    .status-circle.mantenimiento{background:rgba(255,208,122,.13);border-color:#ffd07a;color:#ffe0a2;box-shadow:0 0 0 8px rgba(255,208,122,.06)}
+    .status-circle.ocupada{background:rgba(122,154,255,.13);border-color:#7a9aff;color:#c4d2ff;box-shadow:0 0 0 8px rgba(122,154,255,.06)}
+    .status-circle.cerrada,.status-circle.otro{background:rgba(229,57,53,.13);border-color:#ff7777;color:#ff9b9b;box-shadow:0 0 0 8px rgba(229,57,53,.07)}
+    .card-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    .meta-chip{border:1px solid rgba(126,203,130,.16);border-radius:8px;background:rgba(0,0,0,.16);padding:8px;color:#9cc49c;font-size:.76rem;line-height:1.35}
+    .meta-chip strong{display:block;color:var(--g200);font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px}
+    .card-actions{display:flex;gap:7px;flex-wrap:wrap;align-self:end}
+    .card-actions .btn-accion{min-height:34px}
+    .tabla-wrapper{background:var(--g800);border:1px solid var(--g700);border-radius:14px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.35)}
+    table{width:100%;border-collapse:collapse}
+    thead{background:linear-gradient(90deg,#0d200d,#162816);border-bottom:2px solid var(--g600)}
+    th{padding:14px 18px;text-align:left;font-size:.72rem;font-weight:700;color:var(--g300);text-transform:uppercase;letter-spacing:1.5px;font-family:'IBM Plex Mono',monospace;white-space:nowrap}
+    tbody tr{border-bottom:1px solid #1f3a1f;transition:background .15s}
+    tbody tr:last-child{border-bottom:none}
+    tbody tr:hover{background:#172e17;cursor:pointer}
+    td{padding:13px 18px;font-size:.875rem;vertical-align:middle}
+    .td-id{font-family:'IBM Plex Mono',monospace;font-size:.75rem;color:var(--g300)}
+    .td-nombre{font-weight:700}.td-parque{font-size:.8rem;color:var(--g200);font-family:'IBM Plex Mono',monospace}
+    .badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:.68rem;font-weight:700;text-transform:uppercase;white-space:nowrap}
+    .badge.disponible{background:#1a4a1a;color:#7eff82;border:1px solid #3a7a3a}
+    .badge.mantenimiento{background:#4a3a1a;color:#ffd07a;border:1px solid #7a6a2a}
+    .badge.ocupada{background:#1a1a4a;color:#7a9aff;border:1px solid #2a3a8a}
+    .badge.cerrada{background:#4a1a1a;color:#ff8a8a;border:1px solid #7a3a3a}
+    .badge.otro{background:#2a2a2a;color:#aaa;border:1px solid #5a5a5a}
+    .acciones{display:flex;gap:7px}
+    .btn-accion{padding:6px 12px;border:none;border-radius:6px;font-family:'Raleway',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;transition:.2s}
+    .btn-ver{background:#1a3a5a;color:#7ac8ff;border:1px solid #2a5a8a}.btn-ver:hover{background:#1f4a7a}
+    .btn-editar{background:#3a3a1a;color:#ffe07a;border:1px solid #6a6a1a}.btn-editar:hover{background:#4a4a1a}
+    .btn-estado{background:#1a2a3a;color:#7adcff;border:1px solid #2a5a6a}.btn-estado:hover{background:#1f3a4a}
+    .btn-borrar{background:#3a1a1a;color:#ff8a8a;border:1px solid #7a2a2a}.btn-borrar:hover{background:#4a1a1a}
+    .sin-datos{text-align:center;padding:60px 20px;color:#5a8a5a;font-size:.9rem}
+    .sin-datos .icono{font-size:3rem;margin-bottom:12px}
+    .paginacion{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-top:1px solid var(--g700);font-size:.8rem;color:#6a9a6a;font-family:'IBM Plex Mono',monospace}
+    .pag-botones{display:flex;gap:6px}
+    .pag-btn{padding:5px 12px;background:var(--g700);border:1px solid var(--g600);border-radius:6px;color:var(--g200);cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:.78rem;transition:.2s}
+    .pag-btn:hover:not(:disabled){background:var(--g600)}.pag-btn:disabled{opacity:.35;cursor:not-allowed}
+    .pag-btn.activo{background:var(--g500);border-color:var(--g400);color:#fff}
+    .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;backdrop-filter:blur(4px);align-items:center;justify-content:center}
+    .overlay.activo{display:flex}
+    .modal{background:var(--g800);border:1px solid var(--g500);border-radius:16px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.6);animation:slideUp .25s ease}
+    @keyframes slideUp{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+    .modal-header{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--g700);background:linear-gradient(90deg,#0d200d,#162816);border-radius:16px 16px 0 0}
+    .modal-titulo{font-size:1.05rem;font-weight:800;color:var(--g200)}
+    .btn-cerrar{background:none;border:none;color:#7a9a7a;font-size:1.4rem;cursor:pointer;line-height:1}
+    .btn-cerrar:hover{color:var(--rojo)}
+    .modal-body{padding:24px}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .form-full{grid-column:1/-1}
+    .campo label{display:block;font-size:.75rem;font-weight:700;color:var(--g300);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;font-family:'IBM Plex Mono',monospace}
+    .campo input,.campo select{width:100%;padding:10px 14px;background:var(--g700);border:1px solid var(--g600);border-radius:8px;color:var(--crema);font-family:'Raleway',sans-serif;font-size:.9rem;outline:none;transition:border-color .2s}
+    .campo input:focus,.campo select:focus{border-color:var(--g400)}
+    .campo select option{background:var(--g700)}
+    .modal-footer{display:flex;justify-content:flex-end;gap:10px;padding:16px 24px;border-top:1px solid var(--g700)}
+    .btn-cancelar{padding:10px 22px;background:transparent;border:1px solid var(--g600);border-radius:8px;color:#8aaa8a;font-family:'Raleway',sans-serif;font-weight:700;cursor:pointer}
+    .btn-cancelar:hover{background:var(--g700)}
+    .btn-guardar{padding:10px 28px;background:var(--g400);border:none;border-radius:8px;color:#fff;font-family:'Raleway',sans-serif;font-weight:700;cursor:pointer}
+    .btn-guardar:hover{background:var(--g300)}.btn-guardar:disabled{opacity:.5;cursor:not-allowed}
+    .detalle-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .detalle-item label{font-size:.7rem;color:var(--g300);text-transform:uppercase;letter-spacing:1px;font-family:'IBM Plex Mono',monospace;display:block;margin-bottom:4px}
+    .detalle-item p{font-size:.9rem;color:var(--crema);font-weight:500}
+    .estados-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:20px 24px 24px}
+    .btn-estado-op{padding:14px;border-radius:10px;border:2px solid transparent;cursor:pointer;font-family:'Raleway',sans-serif;font-weight:700;font-size:.875rem;transition:.2s;text-align:center}
+    .btn-estado-op.op1{background:#1a4a1a;color:#7eff82;border-color:#3a7a3a}
+    .btn-estado-op.op2{background:#4a3a1a;color:#ffd07a;border-color:#7a6a2a}
+    .btn-estado-op.op3{background:#1a1a4a;color:#7a9aff;border-color:#2a3a8a}
+    .btn-estado-op.op4{background:#4a1a1a;color:#ff8a8a;border-color:#7a3a3a}
+    .confirm-body{padding:28px 24px;text-align:center}
+    .confirm-icono{font-size:3rem;margin-bottom:14px}
+    .confirm-texto{font-size:1rem;line-height:1.6}
+    .confirm-nombre{font-weight:900;color:#ff8a8a}
+    .confirm-footer{display:flex;justify-content:center;gap:12px;padding-bottom:20px}
+    .btn-confirmar-borrar{padding:10px 28px;background:var(--rojo);border:none;border-radius:8px;color:#fff;font-family:'Raleway',sans-serif;font-weight:700;cursor:pointer}
+    .toast{position:fixed;bottom:28px;right:28px;background:var(--g700);border:1px solid var(--g400);border-radius:10px;padding:14px 20px;font-size:.875rem;font-weight:600;color:var(--g200);z-index:999;transform:translateY(20px);opacity:0;transition:.3s;max-width:320px}
+    .toast.visible{transform:translateY(0);opacity:1}.toast.error{border-color:var(--rojo);color:#ff8a8a}
+  </style>
+  <link rel="stylesheet" href="/css/system-responsive.css">
+  <script src="/js/system-form-helpers.js" defer></script>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <span style="font-size:1.5rem">🏟️</span>
+    <h1>Gestión de Canchas</h1>
+    <span class="badge-total" id="badge-total">Cargando...</span>
+  </div>
+  <button class="btn-nuevo" onclick="abrirModalNuevo()">＋ Nueva Cancha</button>
+</div>
+
+<div class="main">
+  <div class="filtros">
+    <input class="input-buscar" id="buscar" type="text" list="sugerencias-buscar-canchas" maxlength="80" autocomplete="off" placeholder="🔍 Buscar por nombre o parque..." oninput="filtrar()"/>
+    <datalist id="sugerencias-buscar-canchas"></datalist>
+    <select class="select-filtro" id="filtro-parque" onchange="filtrar()"><option value="">Todos los parques</option></select>
+    <select class="select-filtro" id="filtro-estado" onchange="filtrar()"><option value="">Todos los estados</option></select>
+  </div>
+  <div class="cards-wrapper">
+    <div class="cards-grid" id="cards"></div>
+    <div class="paginacion">
+      <span id="info-pag">—</span>
+      <div class="pag-botones" id="pag-botones"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL FORM -->
+<div class="overlay" id="overlay-form">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-titulo" id="titulo-form">Nueva Cancha</span><button class="btn-cerrar" onclick="cerrarModales()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="campo form-full"><label>Nombre</label><input type="text" id="f-nombre" maxlength="60" data-validate="name" placeholder="Ej: Cancha Principal"/></div>
+        <div class="campo form-full"><label>Parque *</label><select id="f-parque"><option value="">— Seleccionar —</option></select></div>
+        <div class="campo form-full"><label>Estado *</label><select id="f-estado"><option value="">— Seleccionar —</option></select></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancelar" onclick="cerrarModales()">Cancelar</button>
+      <button class="btn-guardar" id="btn-guardar" onclick="guardarCancha()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL VER -->
+<div class="overlay" id="overlay-ver">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-titulo">Detalle de la Cancha</span><button class="btn-cerrar" onclick="cerrarModales()">✕</button></div>
+    <div class="modal-body"><div class="detalle-grid" id="detalle-contenido"></div></div>
+    <div class="modal-footer">
+      <button class="btn-cancelar" onclick="cerrarModales()">Cerrar</button>
+      <button class="btn-guardar" onclick="editarDesdeDetalle()">✏️ Editar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ESTADO -->
+<div class="overlay" id="overlay-estado">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header"><span class="modal-titulo">Cambiar Estado</span><button class="btn-cerrar" onclick="cerrarModales()">✕</button></div>
+    <p style="padding:16px 24px 0;color:#8aaa8a;font-size:.85rem" id="estado-cancha-nombre">—</p>
+    <div class="estados-grid" id="estados-grid"></div>
+  </div>
+</div>
+
+<!-- MODAL BORRAR -->
+<div class="overlay" id="overlay-borrar">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header"><span class="modal-titulo" style="color:#ff8a8a">⚠️ Eliminar Cancha</span><button class="btn-cerrar" onclick="cerrarModales()">✕</button></div>
+    <div class="confirm-body">
+      <div class="confirm-icono">🗑️</div>
+      <p class="confirm-texto">¿Seguro que quieres eliminar<br><span class="confirm-nombre" id="nombre-a-borrar"></span>?</p>
+    </div>
+    <div class="confirm-footer">
+      <button class="btn-cancelar" onclick="cerrarModales()">Cancelar</button>
+      <button class="btn-confirmar-borrar" onclick="confirmarBorrar()">Sí, eliminar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────
+const API = "/api";
+
+const LOGIN_URL = "/login";
+const POR_PAGINA = 8;
+
+let canchas=[], filtradas=[], parques=[], estados=[];
+let pagina = 1;
+
+let canchaEditando = null;
+
+let canchaBorrando = null;
+
+let canchaViendoId = null;
+
+let canchaEstadoId = null;
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function horarioTexto(item) {
+  return `${item.hora_apertura || "06:00"}-${item.hora_cierre || "20:00"}`;
+}
+
+function parqueEstadoTexto(item) {
+  return Number(item.parque_abierto_ahora) === 1 ? "Parque abierto" : "Parque cerrado";
+}
+
+function normalizarBusqueda(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function limpiarNombre(value, max = 60) {
+  return String(value || "")
+    .replace(/[^\p{L}\s'-]/gu, "")
+    .replace(/\s{2,}/g, " ")
+    .slice(0, max);
+}
+
+function nombreValido(value) {
+  return /^[\p{L}][\p{L}\s'-]{1,59}$/u.test(String(value || "").trim());
+}
+
+function valoresBusquedaCancha(c) {
+  return [c.nombre, c.parque_nombre].filter(Boolean).map(String);
+}
+
+function actualizarSugerenciasBusquedaCanchas(query = normalizarBusqueda(document.getElementById("buscar")?.value)) {
+  const datalist = document.getElementById("sugerencias-buscar-canchas");
+  if (!datalist) return;
+
+  const vistos = new Set();
+  const sugerencias = [];
+
+  canchas.forEach(c => {
+    valoresBusquedaCancha(c).forEach(value => {
+      const texto = value.trim();
+      const key = normalizarBusqueda(texto);
+      if (!texto || vistos.has(key)) return;
+      if (query && !key.startsWith(query) && !key.includes(query)) return;
+      vistos.add(key);
+      sugerencias.push({ texto, starts: !query || key.startsWith(query) });
+    });
+  });
+
+  sugerencias.sort((a, b) => Number(b.starts) - Number(a.starts) || a.texto.localeCompare(b.texto, "es"));
+  datalist.innerHTML = sugerencias.slice(0, 10).map(item => `<option value="${escapeHtml(item.texto)}"></option>`).join("");
+}
+
+function prepararValidacionCanchas() {
+  const nombre = document.getElementById("f-nombre");
+  nombre?.addEventListener("input", () => {
+    const limpio = limpiarNombre(nombre.value);
+    if (nombre.value !== limpio) nombre.value = limpio;
+  });
+}
+
+// ── FETCH CENTRAL — siempre usa credentials:include ──
+async function apiFetch(url, opts = {}) {
+
+  const token =
+  localStorage.getItem("token");
+
+  const res = await fetch(
+
+    `${API}${url}`,
+
+    {
+
+      ...opts,
+
+      headers: {
+
+        "Content-Type":"application/json",
+
+        "Authorization":
+        `Bearer ${token}`,
+
+        ...opts.headers
+      }
+    }
+  );
+
+  return await res.json();
+}
+// ── INICIO ────────────────────────────────────────
+document.addEventListener(
+
+  "DOMContentLoaded",
+
+  async()=>{
+
+    verificarSesion();
+    prepararValidacionCanchas();
+
+    await cargarCatalogos();
+
+    await cargarCanchas();
+  }
+);
+function verificarSesion(){
+
+  const user = JSON.parse(
+
+    localStorage.getItem("user")
+  );
+
+  if(!user){
+
+    window.location.href =
+    LOGIN_URL;
+
+    return;
+  }
+}
+
+// ── CATÁLOGOS ─────────────────────────────────────
+
+async function cargarCatalogos(){
+
+  try{
+
+    const rp =
+    await apiFetch("/parques");
+
+    parques = rp || [];
+
+  }
+
+  catch(error){
+
+    parques = [];
+  }
+
+  /*
+  ESTADOS FIJOS
+  */
+
+  estados = [
+
+    {
+      id_estado_cancha:1,
+      nombre:"Disponible"
+    },
+
+    {
+      id_estado_cancha:2,
+      nombre:"Mantenimiento"
+    },
+
+    {
+      id_estado_cancha:3,
+      nombre:"Ocupada"
+    },
+
+    {
+      id_estado_cancha:4,
+      nombre:"Cerrada"
+    }
+  ];
+
+  /*
+  SELECT PARQUES
+  */
+
+  const selFP =
+  document.getElementById(
+    "f-parque"
+  );
+
+  const filtroP =
+  document.getElementById(
+    "filtro-parque"
+  );
+
+  parques.forEach(p => {
+
+    [selFP,filtroP]
+    .forEach(sel => {
+
+      const o =
+      document.createElement(
+        "option"
+      );
+
+      o.value =
+      p.id_parque;
+
+      o.textContent =
+      p.nombre;
+
+      sel.appendChild(o);
+    });
+  });
+
+  /*
+  SELECT ESTADOS
+  */
+
+  const selFE =
+  document.getElementById(
+    "f-estado"
+  );
+
+  const filtroE =
+  document.getElementById(
+    "filtro-estado"
+  );
+
+  estados.forEach(e => {
+
+    [selFE,filtroE]
+    .forEach(sel => {
+
+      const o =
+      document.createElement(
+        "option"
+      );
+
+      o.value =
+      e.id_estado_cancha;
+
+      o.textContent =
+      e.nombre;
+
+      sel.appendChild(o);
+    });
+  });
+}
+
+
+
+// ── CANCHAS ───────────────────────────────────────
+async function cargarCanchas() {
+  try {
+    const json = await apiFetch("/canchas");
+    canchas = json || [];
+  } catch { canchas = []; toast("⚠️ Error al cargar canchas", true); }
+  filtradas = [...canchas];
+  actualizarSugerenciasBusquedaCanchas("");
+  renderTabla();
+  document.getElementById("badge-total").textContent = `${canchas.length} canchas`;
+}
+
+// ── TABLA ─────────────────────────────────────────
+function claseEstado(n) {
+  if (!n) return "otro";
+  n = n.toLowerCase();
+  if (n.includes("disponible"))    return "disponible";
+  if (n.includes("mantenimiento")) return "mantenimiento";
+  if (n.includes("ocupada"))       return "ocupada";
+  if (n.includes("cerrada"))       return "cerrada";
+  return "otro";
+}
+
+function renderTabla() {
+  const tbody = document.getElementById("tbody");
+  const inicio = (pagina-1)*POR_PAGINA;
+  const datos  = filtradas.slice(inicio, inicio+POR_PAGINA);
+
+  if (!filtradas.length) {
+    tbody.innerHTML = `<tr><td colspan="5"><div class="sin-datos"><div class="icono">🏟️</div>No se encontraron canchas</div></td></tr>`;
+    renderPaginacion(); return;
+  }
+
+  tbody.innerHTML = datos.map(c => `
+    <tr onclick="verCancha(${c.id_cancha})">
+      <td class="td-id">#${c.id_cancha}</td>
+      <td class="td-nombre">🏟️ ${c.nombre||"(Sin nombre)"}</td>
+      <td class="td-parque">🌳 ${c.parque_nombre||"—"}</td>
+      <td><span class="badge ${claseEstado(c.nombre_estado)}">${c.nombre_estado||"—"}</span></td>
+      <td onclick="event.stopPropagation()">
+        <div class="acciones">
+          <button class="btn-accion btn-ver"    onclick="verCancha(${c.id_cancha})">👁 Ver</button>
+          <button class="btn-accion btn-editar" onclick="abrirModalEditar(${c.id_cancha})">✏️ Editar</button>
+          <button class="btn-accion btn-estado" onclick="abrirModalEstado(${c.id_cancha})">🔄 Estado</button>
+          <button class="btn-accion btn-borrar" onclick="pedirBorrar(${c.id_cancha})">🗑 Borrar</button>
+        </div>
+      </td>
+    </tr>
+  `).join("");
+  renderPaginacion();
+}
+
+function renderTabla() {
+  const contenedor = document.getElementById("cards");
+  const inicio = (pagina - 1) * POR_PAGINA;
+  const datos = filtradas.slice(inicio, inicio + POR_PAGINA);
+
+  if (!filtradas.length) {
+    contenedor.innerHTML = `<div class="sin-datos"><div class="icono">Canchas</div>No se encontraron canchas</div>`;
+    renderPaginacion();
+    return;
+  }
+
+  contenedor.innerHTML = datos.map(c => {
+    const clase = claseEstado(c.nombre_estado);
+    return `
+      <article class="admin-card" onclick="verCancha(${c.id_cancha})">
+        <div class="card-head">
+          <div class="card-title">
+            <h3>${escapeHtml(c.nombre || "(Sin nombre)")}</h3>
+            <span>#${c.id_cancha} - ${escapeHtml(c.parque_nombre || "Sin parque")}</span>
+          </div>
+          <div class="status-circle ${clase}">${escapeHtml(c.nombre_estado || "Sin estado")}</div>
+        </div>
+        <div class="card-meta">
+          <div class="meta-chip"><strong>Parque</strong>${escapeHtml(c.parque_nombre || "Sin parque")}</div>
+          <div class="meta-chip"><strong>Horario</strong>${escapeHtml(horarioTexto(c))}</div>
+          <div class="meta-chip"><strong>Estado parque</strong>${escapeHtml(parqueEstadoTexto(c))}</div>
+          <div class="meta-chip"><strong>Cancha</strong>${escapeHtml(c.nombre_estado || "Sin estado")}</div>
+        </div>
+        <div class="card-actions" onclick="event.stopPropagation()">
+          <button class="btn-accion btn-ver" onclick="verCancha(${c.id_cancha})">Ver</button>
+          <button class="btn-accion btn-editar" onclick="abrirModalEditar(${c.id_cancha})">Editar</button>
+          <button class="btn-accion btn-estado" onclick="abrirModalEstado(${c.id_cancha})">Estado</button>
+          <button class="btn-accion btn-borrar" onclick="pedirBorrar(${c.id_cancha})">Borrar</button>
+        </div>
+      </article>
+    `;
+  }).join("");
+
+  renderPaginacion();
+}
+
+function renderPaginacion() {
+  const total=filtradas.length, paginas=Math.ceil(total/POR_PAGINA);
+  const ini=Math.min((pagina-1)*POR_PAGINA+1,total), fin=Math.min(pagina*POR_PAGINA,total);
+  document.getElementById("info-pag").textContent=total===0?"0 resultados":`Mostrando ${ini}–${fin} de ${total}`;
+  const cont=document.getElementById("pag-botones"); cont.innerHTML="";
+  const bA=document.createElement("button");bA.className="pag-btn";bA.textContent="← Ant";bA.disabled=pagina===1;bA.onclick=()=>{pagina--;renderTabla()};cont.appendChild(bA);
+  for(let i=1;i<=paginas;i++){const b=document.createElement("button");b.className=`pag-btn ${i===pagina?"activo":""}`;b.textContent=i;b.onclick=()=>{pagina=i;renderTabla()};cont.appendChild(b);}
+  const bS=document.createElement("button");bS.className="pag-btn";bS.textContent="Sig →";bS.disabled=pagina>=paginas;bS.onclick=()=>{pagina++;renderTabla()};cont.appendChild(bS);
+}
+
+function filtrar() {
+  const buscador = document.getElementById("buscar");
+  const limpio = limpiarNombre(buscador.value, 80);
+  if (buscador.value !== limpio) buscador.value = limpio;
+  const q = normalizarBusqueda(limpio);
+  const pq=document.getElementById("filtro-parque").value;
+  const est=document.getElementById("filtro-estado").value;
+  const resultados = [];
+  canchas.forEach(c=>{
+    const valores = valoresBusquedaCancha(c).map(normalizarBusqueda);
+    const mQ=!q||valores.some(value => value.includes(q));
+    const starts=q&&valores.some(value => value.startsWith(q));
+    const mP=!pq||String(c.id_parque)===pq;
+    const mE=!est||String(c.id_estado_cancha)===est;
+    if (mQ&&mP&&mE) resultados.push({ c, score: starts ? 0 : 1 });
+  });
+  filtradas = q
+    ? resultados.sort((a, b) => a.score - b.score || String(a.c.nombre || "").localeCompare(String(b.c.nombre || ""), "es")).map(item => item.c)
+    : resultados.map(item => item.c);
+  actualizarSugerenciasBusquedaCanchas(q);
+  pagina=1; renderTabla();
+}
+
+// ── VER ───────────────────────────────────────────
+function verCancha(id) {
+  const c=canchas.find(x=>x.id_cancha===id); if(!c) return;
+  canchaViendoId=id;
+  document.getElementById("detalle-contenido").innerHTML=`
+    <div class="detalle-item"><label>ID</label><p>#${c.id_cancha}</p></div>
+    <div class="detalle-item"><label>Nombre</label><p>${c.nombre||"(Sin nombre)"}</p></div>
+    <div class="detalle-item"><label>Parque</label><p>🌳 ${c.parque_nombre||"—"}</p></div>
+    <div class="detalle-item"><label>Estado</label><p><span class="badge ${claseEstado(c.nombre_estado)}">${c.nombre_estado||"—"}</span></p></div>
+  `;
+  document.getElementById("overlay-ver").classList.add("activo");
+}
+function verCancha(id) {
+  const c = canchas.find(x => x.id_cancha === id);
+  if (!c) return;
+  canchaViendoId = id;
+  document.getElementById("detalle-contenido").innerHTML = `
+    <div class="detalle-item"><label>ID</label><p>#${c.id_cancha}</p></div>
+    <div class="detalle-item"><label>Nombre</label><p>${escapeHtml(c.nombre || "(Sin nombre)")}</p></div>
+    <div class="detalle-item"><label>Parque</label><p>${escapeHtml(c.parque_nombre || "Sin parque")}</p></div>
+    <div class="detalle-item"><label>Estado cancha</label><p><span class="badge ${claseEstado(c.nombre_estado)}">${escapeHtml(c.nombre_estado || "Sin estado")}</span></p></div>
+    <div class="detalle-item"><label>Horario parque</label><p>${escapeHtml(horarioTexto(c))}</p></div>
+    <div class="detalle-item"><label>Estado parque</label><p>${escapeHtml(parqueEstadoTexto(c))}</p></div>
+  `;
+  document.getElementById("overlay-ver").classList.add("activo");
+}
+function editarDesdeDetalle(){cerrarModales();setTimeout(()=>abrirModalEditar(canchaViendoId),100);}
+
+// ── NUEVO / EDITAR ────────────────────────────────
+function abrirModalNuevo(){
+  canchaEditando=null;
+  document.getElementById("titulo-form").textContent="➕ Nueva Cancha";
+  ["f-nombre","f-parque","f-estado"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("overlay-form").classList.add("activo");
+}
+
+function abrirModalEditar(id){
+
+  const c =
+  canchas.find(x =>
+    x.id_cancha === id
+  );
+
+  if(!c) return;
+
+  canchaEditando = c;
+
+  document.getElementById(
+    "titulo-form"
+  ).textContent =
+
+  "✏️ Editar Cancha";
+
+  document.getElementById(
+    "f-nombre"
+  ).value =
+
+  c.nombre || "";
+
+  document.getElementById(
+    "f-parque"
+  ).value =
+
+  c.id_parque || "";
+
+  document.getElementById(
+    "f-estado"
+  ).value =
+
+  c.id_estado_cancha || "";
+
+  document.getElementById(
+    "overlay-form"
+  ).classList.add("activo");
+}
+
+
+
+// ── GUARDAR ───────────────────────────────────────
+
+async function guardarCancha(){
+
+  const inputNombre =
+  document.getElementById(
+    "f-nombre"
+  );
+
+  inputNombre.value = limpiarNombre(inputNombre.value).trim();
+
+  const nombre = inputNombre.value;
+
+  const id_parque =
+  parseInt(
+
+    document.getElementById(
+      "f-parque"
+    ).value
+  );
+
+  const id_estado_cancha =
+  parseInt(
+
+    document.getElementById(
+      "f-estado"
+    ).value
+  );
+
+  if(!nombre){
+
+    return toast(
+      "⚠️ Nombre requerido",
+      true
+    );
+  }
+
+  if(!nombreValido(nombre)){
+
+    return toast(
+      "⚠️ El nombre solo debe contener letras y espacios",
+      true
+    );
+  }
+
+  if(!id_parque){
+
+    return toast(
+      "⚠️ Selecciona parque",
+      true
+    );
+  }
+
+  if(!id_estado_cancha){
+
+    return toast(
+      "⚠️ Selecciona estado",
+      true
+    );
+  }
+
+  const data = {
+
+    nombre,
+
+    id_parque,
+
+    id_estado_cancha
+  };
+
+  try{
+
+    if(canchaEditando){
+
+      await apiFetch(
+
+        `/canchas/${canchaEditando.id_cancha}`,
+
+        {
+
+          method:"PUT",
+
+          body:JSON.stringify(
+            data
+          )
+        }
+      );
+
+      toast(
+        "✅ Cancha actualizada"
+      );
+
+    }
+
+    else{
+
+      await apiFetch(
+
+        "/canchas",
+
+        {
+
+          method:"POST",
+
+          body:JSON.stringify(
+            data
+          )
+        }
+      );
+
+      toast(
+        "✅ Cancha creada"
+      );
+    }
+
+    cerrarModales();
+
+    await cargarCanchas();
+
+  }
+
+  catch(error){
+
+    console.log(error);
+
+    toast(
+      "❌ Error guardando",
+      true
+    );
+  }
+}
+
+
+// ── ESTADO ────────────────────────────────────────
+
+function abrirModalEstado(id){
+
+  const c =
+  canchas.find(x =>
+    x.id_cancha === id
+  );
+
+  if(!c) return;
+
+  canchaEstadoId = id;
+
+  document.getElementById(
+    "estado-cancha-nombre"
+  ).textContent =
+
+  `Cancha: ${c.nombre}`;
+
+  const clases = [
+
+    "op1",
+    "op2",
+    "op3",
+    "op4"
+  ];
+
+  document.getElementById(
+    "estados-grid"
+  ).innerHTML =
+
+  estados.map((e,i)=>
+
+    `
+    <button
+
+      class="
+      btn-estado-op
+      ${clases[i] || "op1"}
+      "
+
+      onclick="
+      aplicarEstado(
+      ${e.id_estado_cancha}
+      )
+      "
+    >
+
+      ${e.nombre}
+
+    </button>
+    `
+  ).join("");
+
+  document.getElementById(
+    "overlay-estado"
+  ).classList.add("activo");
+}
+
+async function aplicarEstado(
+
+  id_estado_cancha
+
+){
+
+  try{
+
+    await apiFetch(
+
+      `/canchas/${canchaEstadoId}/estado`,
+
+      {
+
+        method:"PATCH",
+
+        body:JSON.stringify({
+
+          id_estado_cancha
+        })
+      }
+    );
+
+    await cargarCanchas();
+
+    cerrarModales();
+
+    toast(
+      "🔄 Estado actualizado"
+    );
+
+  }
+
+  catch(error){
+
+    console.log(error);
+
+    toast(
+      "❌ Error actualizando",
+      true
+    );
+  }
+}
+
+
+// ── BORRAR ────────────────────────────────────────
+function pedirBorrar(id){
+  const c=canchas.find(x=>x.id_cancha===id); if(!c) return;
+  canchaBorrando = c;
+  document.getElementById("nombre-a-borrar").textContent=`"${c.nombre||"(Sin nombre)"}"`;
+  document.getElementById("overlay-borrar").classList.add("activo");
+}
+async function confirmarBorrar(){
+
+  if(!canchaBorrando) return;
+
+  try{
+
+    await apiFetch(
+
+      `/canchas/${canchaBorrando.id_cancha}`,
+
+      {
+        method:"DELETE"
+      }
+    );
+
+    cerrarModales();
+
+    await cargarCanchas();
+
+    toast(
+      "🗑️ Cancha eliminada"
+    );
+
+  }
+
+  catch(error){
+
+    console.log(error);
+
+    toast(
+      "❌ Error eliminando",
+      true
+    );
+  }
+}
+
+// ── UTILS ─────────────────────────────────────────
+function cerrarModales(){document.querySelectorAll(".overlay").forEach(o=>o.classList.remove("activo"));canchaEditando = null;
+
+canchaBorrando = null;}
+let _tt;
+function toast(msg,error=false){const el=document.getElementById("toast");el.textContent=msg;el.className=`toast ${error?"error":""} visible`;clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove("visible"),3500);}
+document.querySelectorAll(".overlay").forEach(o=>{o.addEventListener("click",e=>{if(e.target===o)cerrarModales();});});
+</script>
+</body>
+</html>

@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Reportes de Parques</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0d1a0d;--surface:#112211;--surface2:#0d200d;--surface3:#162716;--border:#1a3a1a;--border2:#2d5a2d;--text:#b8e6ba;--muted:#6f9d6f;--accent:#7ecb82;--gold:#d9b24c;--red:#d96c6c;--blue:#4f9fd9;--overlay:rgba(0,0,0,.78)}
+body{font-family:"Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:22px 14px}
+button,input,select,textarea{font:inherit}
+.container{width:100%;max-width:1480px;margin:0 auto;display:grid;gap:16px}
+.hero{display:flex;justify-content:space-between;gap:14px;align-items:flex-end;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:22px;box-shadow:0 10px 34px rgba(0,0,0,.35)}
+.eyebrow{font-size:.72rem;text-transform:uppercase;letter-spacing:.14em;color:var(--gold);font-weight:900}.hero h1{margin-top:7px;color:var(--accent);font-size:1.55rem}.hero p{margin-top:7px;color:var(--muted);line-height:1.5}
+.btn{min-height:39px;border:0;border-radius:8px;padding:0 14px;color:#fff;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:7px}.btn-green{background:#2e7d32}.btn-green:hover{background:#388e3c}.btn-gold{background:var(--gold);color:#122012}.btn-blue{background:#1565c0}.btn-red{background:#b33f3f}.btn-muted{background:#3a5a3a;color:#d7ead7}.btn:disabled{opacity:.6;cursor:not-allowed}
+.filters{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;display:grid;gap:12px}.filters-title{font-size:.72rem;color:var(--muted);font-weight:900;text-transform:uppercase;letter-spacing:.12em}.filters-grid{display:grid;grid-template-columns:1.35fr 1.1fr 1fr;gap:10px}.filters-grid.second{grid-template-columns:repeat(5,minmax(120px,1fr)) auto auto}
+.field{display:grid;gap:5px}.field label{font-size:.7rem;color:var(--accent);font-weight:900;text-transform:uppercase;letter-spacing:.08em}
+input,select,textarea{width:100%;border:1px solid var(--border2);border-radius:8px;background:#0a1a0a;color:var(--text);outline:none}input,select{min-height:40px;padding:0 10px}textarea{min-height:88px;padding:10px;resize:vertical}input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(126,203,130,.12)}select option{background:#0a1a0a}
+.tabs{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px}.tab{min-height:78px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);cursor:pointer;text-align:left;padding:12px;display:grid;gap:6px}.tab strong{font-size:1.55rem;color:#fff}.tab span{font-size:.75rem;color:var(--muted);font-weight:900;text-transform:uppercase}.tab.active{border-color:var(--gold);background:#172b17;box-shadow:0 0 0 3px rgba(217,178,76,.09)}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden}.panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border)}.panel-head h2{font-size:1rem;color:var(--accent)}.panel-head small{color:var(--muted);font-weight:700}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:1000px}th,td{padding:11px 12px;border-bottom:1px solid var(--border);text-align:left;font-size:.86rem;vertical-align:middle}th{background:#0b1c0b;color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em}tbody tr:hover{background:#172817}.thumb{width:76px;height:54px;object-fit:cover;border-radius:8px;border:1px solid var(--border2);display:block}.desc{max-width:310px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.muted{color:var(--muted)}.mono{font-family:Consolas,"Courier New",monospace;color:#d0e8d0;font-size:.8rem}.actions{display:flex;gap:6px;flex-wrap:wrap}
+.badge{display:inline-flex;min-height:24px;align-items:center;padding:0 9px;border-radius:999px;font-size:.72rem;font-weight:900;color:#fff;white-space:nowrap}.alta{background:#b33f3f}.media{background:#b06c22}.baja{background:#2e7d32}.pendiente{background:#58606a}.revision{background:#1565c0}.resuelto{background:#2e7d32}.rechazado{background:#b33f3f}.critico{border:1px solid var(--red);color:#ffd2d2;background:rgba(217,108,108,.12)}
+.pagination{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 16px}.pagination span{color:var(--muted);font-size:.84rem}.empty{min-height:130px;display:grid;place-items:center;color:var(--muted);border:1px dashed var(--border2);border-radius:8px;margin:14px}.error{color:#ff9b9b;font-size:.86rem;padding:0 16px 14px}
+.assigned-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;padding:14px}.assigned-card{border:1px solid var(--border);border-radius:8px;background:var(--surface2);padding:13px;display:grid;gap:7px}.assigned-card h3{font-size:.95rem;color:#fff}.assigned-card p,.assigned-card small{color:var(--muted);line-height:1.45}.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;padding:14px}.summary-card{border:1px solid var(--border);border-radius:8px;background:var(--surface2);padding:13px}.summary-card span{display:block;color:var(--muted);font-size:.72rem;font-weight:900;text-transform:uppercase}.summary-card strong{display:block;margin-top:7px;font-size:1.45rem;color:#fff}
+.manager-grid{display:grid;grid-template-columns:minmax(280px,.8fr) minmax(0,1.2fr);gap:14px;padding:14px}.ranking,.workload{display:grid;gap:10px}.rank-card,.work-card{border:1px solid var(--border);border-radius:8px;background:var(--surface2);padding:13px;display:grid;gap:7px}.work-card{cursor:pointer;transition:.18s}.work-card:hover,.work-card:focus-visible{border-color:var(--gold);background:#172b17;outline:none}.rank-card strong,.work-card strong{color:#fff}.rank-card .place{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--gold);color:#132013;font-weight:900}.rank-card{grid-template-columns:auto 1fr;align-items:center}.work-stats{display:flex;gap:8px;flex-wrap:wrap}.work-stats span{border:1px solid var(--border2);border-radius:999px;padding:4px 9px;color:var(--muted);font-size:.75rem;font-weight:800}.charts-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.chart-box{min-height:280px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);padding:12px}.chart-box h3{font-size:.86rem;color:var(--accent);margin-bottom:8px}.chart-box canvas{max-height:220px}
+.modal-overlay{display:none;position:fixed;inset:0;background:var(--overlay);z-index:1000;align-items:center;justify-content:center;padding:16px}.modal-overlay.active{display:flex}.modal{width:min(980px,100%);max-height:92vh;overflow:auto;background:var(--surface);border:1px solid var(--border2);border-radius:10px;box-shadow:0 24px 64px rgba(0,0,0,.72)}.modal.small{width:min(620px,100%)}.modal-header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid var(--border)}.modal-header h2{font-size:1.05rem;color:var(--accent)}.modal-close{width:34px;height:34px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--text);cursor:pointer}.modal-body{padding:18px;display:grid;gap:14px}.modal-footer{padding:14px 18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}.detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.detail-item{border:1px solid var(--border);border-radius:8px;background:var(--surface2);padding:11px}.detail-item span{display:block;color:var(--muted);font-size:.72rem;text-transform:uppercase;font-weight:900}.detail-item strong{display:block;margin-top:5px;color:#fff}.image-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}.image-grid img{width:100%;height:110px;object-fit:cover;border-radius:8px;border:1px solid var(--border2)}.timeline{display:grid;gap:8px}.timeline article{border-left:3px solid var(--gold);background:var(--surface2);border-radius:8px;padding:10px}.timeline strong{display:block;color:#fff}.timeline small{color:var(--muted)}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.form-grid .full{grid-column:1/-1}.preview-list{display:flex;gap:8px;flex-wrap:wrap}.preview-list img{width:86px;height:70px;object-fit:cover;border-radius:8px;border:1px solid var(--border2)}
+@media(max-width:1100px){.filters-grid,.filters-grid.second,.tabs,.detail-grid,.form-grid,.manager-grid,.charts-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.hero{align-items:flex-start;flex-direction:column}}@media(max-width:760px){.manager-grid,.charts-grid{grid-template-columns:1fr}}@media(max-width:620px){body{padding:10px 8px}.filters-grid,.filters-grid.second,.tabs,.detail-grid,.form-grid{grid-template-columns:1fr}.panel-head,.pagination{align-items:flex-start;flex-direction:column}.modal-body{padding:14px}.form-grid .full{grid-column:auto}}
+</style>
+  <link rel="stylesheet" href="/css/system-responsive.css">
+  <script src="/js/system-form-helpers.js" defer></script>
+</head>
+<body>
+<main class="container">
+  <section class="hero">
+    <div>
+      <div class="eyebrow">Gestion administrativa</div>
+      <h1>Reportes de Parques</h1>
+      <p>Gestion por estados, asignaciones a gestores, busqueda avanzada, detalle completo y trazabilidad.</p>
+    </div>
+    <button class="btn btn-blue" type="button" onclick="openCreateModal()">Crear reporte</button>
+  </section>
+
+  <section class="filters">
+    <div class="filters-title">Buscador avanzado</div>
+    <div class="filters-grid">
+      <div class="field"><label>Busqueda general</label><input id="q" type="search" list="sugerencias-reportes" maxlength="80" autocomplete="off" placeholder="Parque, cancha, gestor, estado, prioridad o descripcion..."><datalist id="sugerencias-reportes"></datalist></div>
+      <div class="field"><label>Parque</label><input id="parque" type="text" list="sugerencias-parques" maxlength="80" autocomplete="off" placeholder="Escribe el nombre del parque"><datalist id="sugerencias-parques"></datalist></div>
+      <div class="field"><label>Cancha</label><input id="cancha" type="text" list="sugerencias-canchas" maxlength="80" autocomplete="off" placeholder="Nombre de cancha"><datalist id="sugerencias-canchas"></datalist></div>
+    </div>
+    <div class="filters-grid second">
+      <div class="field"><label>Gestor</label><select id="gestor"><option value="">Todos</option></select></div>
+      <div class="field"><label>Estado</label><select id="estado"><option value="">Todos</option><option value="1">Pendiente</option><option value="2">En proceso</option><option value="3">Completado</option><option value="4">Rechazado</option></select></div>
+      <div class="field"><label>Prioridad</label><select id="prioridad"><option value="">Todas</option><option value="1">Alta</option><option value="2">Media</option><option value="3">Baja</option></select></div>
+      <div class="field"><label>Desde</label><input id="fechaInicio" type="date" min="2026-03-01"></div>
+      <div class="field"><label>Hasta</label><input id="fechaFin" type="date" min="2026-03-01"></div>
+      <button class="btn btn-green" type="button" onclick="loadReports(1)">Buscar</button>
+      <button class="btn btn-muted" type="button" onclick="clearFilters()">Limpiar</button>
+    </div>
+  </section>
+
+  <section class="tabs" id="tabs"></section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <div><h2>Dashboard de gestores</h2><small id="managerSummary">Metricas en tiempo real</small></div>
+      <button class="btn btn-muted" type="button" onclick="loadManagerMetrics()">Actualizar</button>
+    </div>
+    <div class="manager-grid">
+      <div>
+        <h3 class="filters-title">Ranking mensual</h3>
+        <div class="ranking" id="rankingGrid"></div>
+        <h3 class="filters-title" style="margin-top:14px">Carga de trabajo</h3>
+        <div class="workload" id="workloadGrid"></div>
+      </div>
+      <div class="charts-grid">
+        <article class="chart-box"><h3>Reportes por mes</h3><canvas id="chartMes"></canvas></article>
+        <article class="chart-box"><h3>Reportes por parque</h3><canvas id="chartParque"></canvas></article>
+        <article class="chart-box"><h3>Reportes por cancha</h3><canvas id="chartCancha"></canvas></article>
+        <article class="chart-box"><h3>Rendimiento de gestores</h3><canvas id="chartGestores"></canvas></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="managerDetailPanel" hidden>
+    <div class="panel-head">
+      <div><h2 id="managerDetailTitle">Resumen de Gestor</h2><small id="managerDetailSubtitle">Selecciona un gestor en carga de trabajo</small></div>
+      <button class="btn btn-muted" type="button" onclick="clearManagerSelection()">Ver todos</button>
+    </div>
+    <div class="summary-grid" id="managerDetailGrid"></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <div><h2 id="sectionTitle">Pendientes</h2><small id="summary">Cargando...</small></div>
+      <button class="btn btn-gold" type="button" onclick="exportPdf()">Exportar PDF</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Foto</th><th>Reporte</th><th>Parque / Cancha</th><th>Usuario</th><th>Gestor</th><th>Prioridad</th><th>Estado</th><th>Fecha</th><th>Acciones</th></tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <div id="empty" class="empty" hidden>No se encontraron reportes.</div>
+    <div id="error" class="error"></div>
+    <div class="pagination">
+      <button class="btn btn-muted" id="prevBtn" type="button" onclick="changePage(-1)">Anterior</button>
+      <span id="pageInfo">Pagina 1 de 1</span>
+      <button class="btn btn-muted" id="nextBtn" type="button" onclick="changePage(1)">Siguiente</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <div><h2>Reportes asignados</h2><small>Modulo independiente de seguimiento operativo</small></div>
+      <button class="btn btn-muted" type="button" onclick="loadAssigned()">Actualizar</button>
+    </div>
+    <div class="assigned-grid" id="assignedGrid"></div>
+  </section>
+</main>
+
+<div class="modal-overlay" id="detailModal">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-header"><h2 id="detailTitle">Detalle de reporte</h2><button class="modal-close" onclick="closeModal('detailModal')">x</button></div>
+    <div class="modal-body" id="detailBody"></div>
+    <div class="modal-footer"><button class="btn btn-muted" onclick="closeModal('detailModal')">Cerrar</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="assignModal">
+  <div class="modal small" role="dialog" aria-modal="true">
+    <div class="modal-header"><h2 id="assignTitle">Asignar reporte</h2><button class="modal-close" onclick="closeModal('assignModal')">x</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field"><label>Gestor</label><select id="a_gestor"><option value="">Sin asignar</option></select></div>
+        <div class="field"><label>Estado</label><select id="a_estado"><option value="1">Pendiente</option><option value="2">En proceso</option><option value="3">Completado</option><option value="4">Rechazado</option></select></div>
+        <div class="field"><label>Prioridad</label><select id="a_prioridad"><option value="1">Alta</option><option value="2">Media</option><option value="3">Baja</option></select></div>
+        <div class="field"><label>Criticidad</label><select id="a_critico"><option value="0">No critico</option><option value="1">Critico</option></select></div>
+        <div class="field"><label>Fecha limite</label><input id="a_fecha_limite" type="date" min="2026-03-01"></div>
+        <div class="field full"><label>Observaciones</label><textarea id="a_observaciones" maxlength="1000"></textarea></div>
+        <div class="field full"><label>Comentario de asignacion</label><textarea id="a_comentario" maxlength="1000"></textarea></div>
+      </div>
+      <div id="assignError" class="error"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-muted" onclick="closeModal('assignModal')">Cancelar</button><button class="btn btn-green" id="assignSave" onclick="saveAssignment()">Guardar</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="createModal">
+  <div class="modal small" role="dialog" aria-modal="true">
+    <div class="modal-header"><h2>Crear reporte</h2><button class="modal-close" onclick="closeModal('createModal')">x</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field"><label>Parque</label><select id="c_parque" onchange="loadCreateCourts()"><option value="">Selecciona</option></select></div>
+        <div class="field"><label>Cancha</label><select id="c_cancha"><option value="">Selecciona parque</option></select></div>
+        <div class="field"><label>Prioridad</label><select id="c_prioridad"><option value="2">Media</option><option value="1">Alta</option><option value="3">Baja</option></select></div>
+        <div class="field full"><label>Descripcion</label><textarea id="c_descripcion" maxlength="1000"></textarea></div>
+        <div class="field full"><label>Imagenes</label><input id="c_imagenes" type="file" accept="image/jpeg,image/png,image/webp" multiple onchange="renderCreatePreview()"><div class="preview-list" id="createPreview"></div></div>
+      </div>
+      <div id="createError" class="error"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-muted" onclick="closeModal('createModal')">Cancelar</button><button class="btn btn-blue" id="createSave" onclick="saveCreatedReport()">Guardar</button></div>
+  </div>
+</div>
+
+<script>
+const API="/api";
+const token=localStorage.getItem("token")||"";
+const auth=()=>({Authorization:`Bearer ${token}`});
+const state={section:"pendientes",page:1,limit:10,pages:1,total:0,gestores:[],managerMetrics:[],selectedManager:null,reports:[],parks:[],editing:null,charts:{},suggestTimer:null,searchTimer:null};
+const sections=[["todos","Todos"],["pendientes","Pendientes"],["asignados","Asignados"],["proceso","En Proceso"],["completados","Completados"],["rechazados","Rechazados"]];
+const esc=v=>String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+const fmtDate=v=>{const d=new Date(v);return Number.isNaN(d.getTime())?"-":d.toLocaleString("es-BO",{dateStyle:"short",timeStyle:"short"})};
+const safeImg=v=>/^\/uploads\/reportes\/[A-Za-z0-9._-]+$/.test(String(v||""))?v:"https://placehold.co/140x90/1a3a1a/7ecb82?text=Sin+foto";
+const priorityClass=n=>String(n).toLowerCase()==="alta"?"alta":String(n).toLowerCase()==="media"?"media":"baja";
+const stateClass=n=>{const s=String(n||"").toLowerCase();if(s.includes("rechaz"))return"rechazado";if(s.includes("resuelto")||s.includes("complet"))return"resuelto";if(s.includes("revision")||s.includes("proceso"))return"revision";return"pendiente"};
+function qs(id){return document.getElementById(id)}
+async function api(path,options={}){const res=await fetch(path,{...options,headers:{...(options.headers||{}),...auth()}});const json=await res.json().catch(()=>({}));if(res.status===401||res.status===403){window.top.location.href="/login";return null}if(!res.ok||json.ok===false)throw new Error(json.error||"Error de servidor");return json}
+function validateDateInputs(){const i=qs("fechaInicio").value,f=qs("fechaFin").value;if((i&&i<"2026-03-01")||(f&&f<"2026-03-01")){qs("error").textContent="No se permiten fechas anteriores al 2026-03-01";return false}if(i&&f&&i>f){qs("error").textContent="La fecha inicial no puede ser mayor que la final";return false}return true}
+function params(page=state.page){const p=new URLSearchParams();["q","parque","cancha","gestor","estado","prioridad","fechaInicio","fechaFin"].forEach(id=>{const el=qs(id);const v=el?el.value.trim():"";if(v)p.set(id,v)});p.set("section",state.section);p.set("page",String(page));p.set("limit",String(state.limit));return p}
+function renderTabs(c={}){qs("tabs").innerHTML=sections.map(([id,label])=>`<button class="tab ${state.section===id?"active":""}" onclick="setSection('${id}')"><span>${label}</span><strong>${Number(c[id]||0)}</strong></button>`).join("")}
+function setSection(id){state.section=id;state.page=1;loadReports(1)}
+async function loadReports(page=state.page){qs("error").textContent="";if(!validateDateInputs())return;try{const json=await api(`${API}/reportes/admin/list?${params(page)}`);if(!json)return;state.page=json.pagination.page;state.pages=json.pagination.pages;state.total=json.pagination.total;state.reports=json.data||[];renderTabs(json.counters||{});renderRows();updateLocalSuggestions();}catch(e){qs("error").textContent=e.message||"No se pudieron cargar reportes"}}
+function renderRows(){const title=sections.find(x=>x[0]===state.section)?.[1]||"Reportes";qs("sectionTitle").textContent=title;qs("summary").textContent=`${state.total} reporte(s) encontrados`;qs("pageInfo").textContent=`Pagina ${state.page} de ${state.pages}`;qs("prevBtn").disabled=state.page<=1;qs("nextBtn").disabled=state.page>=state.pages;qs("empty").hidden=state.reports.length>0;const tbody=qs("rows");tbody.innerHTML=state.reports.map(r=>`<tr><td><img class="thumb" src="${esc(safeImg(r.foto))}" alt="foto"></td><td><div class="mono">#${r.id_reporte}</div><div class="desc" title="${esc(r.descripcion)}">${esc(r.descripcion)}</div>${Number(r.es_critico)?'<span class="badge critico">Critico</span>':""}</td><td><strong>${esc(r.parque)}</strong><br><span class="muted">${esc(r.cancha||"Sin cancha")}</span></td><td>${esc(r.usuario||"-")}</td><td>${esc(r.gestor||"Sin asignar")}</td><td><span class="badge ${priorityClass(r.prioridad)}">${esc(r.prioridad)}</span></td><td><span class="badge ${stateClass(r.estado)}">${esc(r.estado)}</span></td><td>${fmtDate(r.fecha_creacion)}</td><td><div class="actions"><button class="btn btn-muted" onclick="openDetail(${r.id_reporte})">Detalle</button><button class="btn btn-green" onclick="openAssign(${r.id_reporte})">Asignar</button></div></td></tr>`).join("")}
+function changePage(delta){const next=state.page+delta;if(next>=1&&next<=state.pages)loadReports(next)}
+function clearFilters(){["q","parque","cancha","gestor","estado","prioridad","fechaInicio","fechaFin"].forEach(id=>{const el=qs(id);if(el)el.value=""});state.selectedManager=null;state.section="pendientes";renderManagerSummary();loadReports(1)}
+function exportPdf(){if(!validateDateInputs())return;const p=new URLSearchParams();["fechaInicio","fechaFin","parque","prioridad","estado"].forEach(id=>{const v=qs(id).value.trim();if(v)p.set(id==="fechaInicio"?"fechaInicio":id==="fechaFin"?"fechaFin":id,v)});fetch(`${API}/reportes/pdf?${p}`,{headers:auth()}).then(r=>{if(!r.ok)throw new Error("No se pudo exportar PDF");return r.blob()}).then(blob=>{const url=URL.createObjectURL(blob);window.open(url,"_blank");setTimeout(()=>URL.revokeObjectURL(url),60000)}).catch(e=>qs("error").textContent=e.message)}
+function fillDatalist(id, values){const el=qs(id);if(!el)return;const seen=new Set();el.innerHTML=values.map(v=>String(v||"").trim()).filter(Boolean).filter(v=>{const key=v.toLowerCase();if(seen.has(key))return false;seen.add(key);return true}).slice(0,18).map(v=>`<option value="${esc(v)}"></option>`).join("")}
+function updateLocalSuggestions(){const q=String(qs("parque")?.value||"").toLowerCase();fillDatalist("sugerencias-parques",state.parks.filter(p=>!q||String(p.nombre||"").toLowerCase().includes(q)).map(p=>p.nombre));const cq=String(qs("cancha")?.value||"").toLowerCase();const canchas=state.reports.map(r=>r.cancha).filter(v=>v&&(!cq||String(v).toLowerCase().includes(cq)));fillDatalist("sugerencias-canchas",canchas)}
+async function loadReportSuggestions(){clearTimeout(state.suggestTimer);state.suggestTimer=setTimeout(async()=>{try{const q=qs("q").value.trim();const json=await api(`${API}/reportes/admin/sugerencias?q=${encodeURIComponent(q)}`);fillDatalist("sugerencias-reportes",(json?.data||[]).map(x=>x.valor))}catch{}},180)}
+function scheduleSearch(){clearTimeout(state.searchTimer);state.searchTimer=setTimeout(()=>loadReports(1),360)}
+async function loadGestores(){const json=await api(`${API}/reportes/gestores/lista`);state.gestores=json?.data||[];const options='<option value="">Todos</option>'+state.gestores.map(g=>`<option value="${g.id_usuario}">${esc([g.nombre,g.apellido_paterno,g.apellido_materno].filter(Boolean).join(" "))}</option>`).join("");qs("gestor").innerHTML=options;qs("a_gestor").innerHTML='<option value="">Sin asignar</option>'+options.replace('<option value="">Todos</option>','')}
+async function loadParks(){const json=await fetch(`${API}/parques`,{headers:auth()}).then(r=>r.json());state.parks=Array.isArray(json)?json:(json.data||[]);qs("c_parque").innerHTML='<option value="">Selecciona</option>'+state.parks.map(p=>`<option value="${p.id_parque}">${esc(p.nombre)}</option>`).join("");updateLocalSuggestions()}
+async function loadAssigned(){try{const json=await api(`${API}/reportes/admin/asignados?limit=20`);const rows=json?.data||[];qs("assignedGrid").innerHTML=rows.length?rows.map(r=>`<article class="assigned-card"><span class="mono">#${r.id_reporte}</span><h3>${esc(r.parque)}${r.cancha?" / "+esc(r.cancha):""}</h3><p>Gestor: ${esc(r.gestor||"Sin asignar")}</p><p>Estado: ${esc(r.estado||"-")}</p><small>Asignado: ${fmtDate(r.fecha_asignacion)} | Ultima actualizacion: ${fmtDate(r.ultima_actualizacion)}</small><p>${esc(r.observaciones||"Sin observaciones")}</p></article>`).join(""):`<div class="empty">No hay reportes asignados.</div>`}catch(e){qs("assignedGrid").innerHTML=`<div class="error">${esc(e.message)}</div>`}}
+function chart(id,type,labels,values,label,color){if(!window.Chart)return;const canvas=qs(id);state.charts[id]?.destroy();state.charts[id]=new Chart(canvas,{type,data:{labels,datasets:[{label,data:values,backgroundColor:color||["#7ecb82","#d9b24c","#4f9fd9","#d96c6c"],borderColor:Array.isArray(color)?color[0]:"#7ecb82",borderWidth:2,tension:.32}]},options:{responsive:true,plugins:{legend:{labels:{color:"#b8e6ba"}}},scales:type==="doughnut"||type==="pie"?undefined:{x:{ticks:{color:"#6f9d6f"},grid:{color:"rgba(184,230,186,.08)"}},y:{beginAtZero:true,ticks:{color:"#6f9d6f"},grid:{color:"rgba(184,230,186,.08)"}}}}})}
+function managerById(id){return state.managerMetrics.find(g=>Number(g.id_usuario)===Number(id))}
+function renderManagerSummary(){const panel=qs("managerDetailPanel");if(!state.selectedManager){panel.hidden=true;return}const g=managerById(state.selectedManager);if(!g){panel.hidden=true;return}panel.hidden=false;qs("managerDetailTitle").textContent=`Resumen de Gestor: ${g.nombre||"Gestor"}`;qs("managerDetailSubtitle").textContent=`${g.email||"Sin correo"} - ${Number(g.activo)?"Activo":"Inactivo"}`;const cards=[["Asignados",g.total_asignados],["Pendientes",g.pendientes],["En proceso",g.en_proceso],["Completados",g.completados],["Rechazados",g.rechazados],["Tiempo prom.",`${g.horas_promedio_resolucion??"-"} h`]];qs("managerDetailGrid").innerHTML=cards.map(([label,value])=>`<article class="summary-card"><span>${esc(label)}</span><strong>${typeof value==="number"?Number(value||0):esc(value)}</strong></article>`).join("")}
+async function showManagerReports(id){state.selectedManager=Number(id);qs("gestor").value=String(id);qs("estado").value="";qs("prioridad").value="";state.section="todos";renderManagerSummary();await loadReports(1);qs("managerDetailPanel").scrollIntoView({behavior:"smooth",block:"start"})}
+function clearManagerSelection(){state.selectedManager=null;qs("gestor").value="";state.section="todos";renderManagerSummary();loadReports(1)}
+async function loadManagerMetrics(){try{const json=await api(`${API}/reportes/admin/metrics`);const d=json?.data||{};const ranking=d.rankingMensual||[];const gestores=d.gestores||[];state.managerMetrics=gestores;qs("managerSummary").textContent=`${gestores.length} gestor(es) monitoreados`;qs("rankingGrid").innerHTML=ranking.slice(0,3).length?ranking.slice(0,3).map((g,i)=>`<article class="rank-card"><div class="place">${i+1}</div><div><strong>${esc(g.nombre||"Gestor")}</strong><p class="muted">${Number(g.reportes||0)} completados este mes</p><small>${Number(g.porcentaje_cumplimiento||0)}% de cumplimiento</small></div></article>`).join(""):`<div class="empty">Sin ranking mensual.</div>`;qs("workloadGrid").innerHTML=gestores.length?gestores.slice(0,8).map(g=>`<article class="work-card" tabindex="0" role="button" onclick="showManagerReports(${Number(g.id_usuario)})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showManagerReports(${Number(g.id_usuario)})}"><strong>${esc(g.nombre||"Gestor")}</strong><div class="work-stats"><span>${Number(g.total_asignados||0)} asignados</span><span>${Number(g.en_proceso||0)} en proceso</span><span>${Number(g.completados||0)} completados</span><span>${Number(g.pendientes||0)} pendientes</span><span>${Number(g.rechazados||0)} rechazados</span></div><small>Tiempo promedio: ${g.horas_promedio_resolucion??"-"} h</small></article>`).join(""):`<div class="empty">No hay gestores.</div>`;renderManagerSummary();const charts=d.charts||{};chart("chartMes","line",(charts.reportesPorMes||[]).map(x=>x.mes),(charts.reportesPorMes||[]).map(x=>Number(x.total)),"Reportes","#7ecb82");chart("chartParque","bar",(charts.reportesPorParque||[]).map(x=>x.nombre),(charts.reportesPorParque||[]).map(x=>Number(x.total)),"Reportes","#4f9fd9");chart("chartCancha","bar",(charts.reportesPorCancha||[]).map(x=>x.nombre),(charts.reportesPorCancha||[]).map(x=>Number(x.total)),"Reportes","#d9b24c");chart("chartGestores","bar",gestores.map(x=>x.nombre),gestores.map(x=>Number(x.completados||0)),"Completados","#7ecb82")}catch(e){qs("managerSummary").textContent=e.message||"No se pudieron cargar metricas"}}
+function closeModal(id){qs(id).classList.remove("active")}
+async function openDetail(id){qs("detailTitle").textContent=`Detalle de reporte #${id}`;qs("detailBody").innerHTML='<div class="empty">Cargando detalle...</div>';qs("detailModal").classList.add("active");try{const json=await api(`${API}/reportes/${id}/detalle`);const d=json.data;const r=d.reporte;qs("detailBody").innerHTML=`<section class="detail-grid"><div class="detail-item"><span>Parque</span><strong>${esc(r.parque)}</strong></div><div class="detail-item"><span>Cancha</span><strong>${esc(r.cancha||"Sin cancha")}</strong></div><div class="detail-item"><span>Usuario</span><strong>${esc(r.usuario)}</strong></div><div class="detail-item"><span>Gestor</span><strong>${esc(r.gestor||"Sin asignar")}</strong></div><div class="detail-item"><span>Estado</span><strong>${esc(r.estado)}</strong></div><div class="detail-item"><span>Fecha</span><strong>${fmtDate(r.fecha_creacion)}</strong></div></section><div class="detail-item"><span>Descripcion</span><strong>${esc(r.descripcion)}</strong></div><h3>Imagenes</h3><div class="image-grid">${d.imagenes.length?d.imagenes.map(i=>`<img src="${esc(safeImg(i.url_imagen))}" alt="${esc(i.nombre_archivo||"imagen")}">`).join(""):'<div class="empty">Sin imagenes.</div>'}</div><h3>Comentarios</h3><div class="timeline">${d.comentarios.length?d.comentarios.map(c=>`<article><strong>${esc(c.usuario)} - ${esc(c.tipo)}</strong><p>${esc(c.comentario)}</p><small>${fmtDate(c.creado_en)}</small></article>`).join(""):'<div class="empty">Sin comentarios.</div>'}</div><h3>Historial</h3><div class="timeline">${d.historial.length?d.historial.map(h=>`<article><strong>${esc(h.accion)}</strong><p>${esc(h.comentario||"Cambio registrado")}</p><small>${fmtDate(h.creado_en)} | ${esc(h.responsable||"Sistema")}</small></article>`).join(""):'<div class="empty">Sin historial.</div>'}</div><h3>Asignaciones</h3><div class="timeline">${d.asignaciones.length?d.asignaciones.map(a=>`<article><strong>${esc(a.gestor)} ${Number(a.activa)?"(activa)":""}</strong><p>${esc(a.comentario||"Sin comentario")}</p><small>${fmtDate(a.fecha_asignacion)} | Admin: ${esc(a.administrador||"-")}</small></article>`).join(""):'<div class="empty">Sin asignaciones.</div>'}</div>`}catch(e){qs("detailBody").innerHTML=`<div class="error">${esc(e.message)}</div>`}}
+async function openAssign(id){state.editing=id;qs("assignTitle").textContent=`Asignar reporte #${id}`;qs("assignError").textContent="";const r=state.reports.find(x=>Number(x.id_reporte)===Number(id));if(r){qs("a_gestor").value=String(r.id_gestor||"");qs("a_estado").value=String(r.id_estado_reporte||1);qs("a_prioridad").value=String(r.id_prioridad||2);qs("a_critico").value=String(Number(r.es_critico||0));qs("a_observaciones").value=r.observaciones||"";qs("a_fecha_limite").value="";qs("a_comentario").value=""}qs("assignModal").classList.add("active")}
+async function saveAssignment(){if(!state.editing)return;const btn=qs("assignSave");btn.disabled=true;qs("assignError").textContent="";if(qs("a_fecha_limite").value&&qs("a_fecha_limite").value<"2026-03-01"){qs("assignError").textContent="No se permiten fechas anteriores al 2026-03-01";btn.disabled=false;return}try{const body={id_gestor:qs("a_gestor").value?Number(qs("a_gestor").value):null,id_estado_reporte:Number(qs("a_estado").value),id_prioridad:Number(qs("a_prioridad").value),es_critico:qs("a_critico").value==="1",observaciones:qs("a_observaciones").value.trim(),comentario:qs("a_comentario").value.trim(),fecha_limite:qs("a_fecha_limite").value};await api(`${API}/reportes/${state.editing}/gestion`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});closeModal("assignModal");await loadReports(state.page);await loadAssigned();await loadManagerMetrics()}catch(e){qs("assignError").textContent=e.message||"Error guardando asignacion"}finally{btn.disabled=false}}
+function openCreateModal(){qs("createError").textContent="";qs("c_parque").value="";qs("c_cancha").innerHTML='<option value="">Selecciona parque</option>';qs("c_descripcion").value="";qs("c_prioridad").value="2";qs("c_imagenes").value="";qs("createPreview").innerHTML="";qs("createModal").classList.add("active")}
+async function loadCreateCourts(){const id=qs("c_parque").value;if(!id){qs("c_cancha").innerHTML='<option value="">Selecciona parque</option>';return}const json=await api(`${API}/reportes/parques/${id}/canchas`);const rows=json?.data||[];qs("c_cancha").innerHTML='<option value="">Selecciona cancha</option>'+rows.map(c=>`<option value="${c.id_cancha}">${esc(c.nombre)}</option>`).join("")}
+function renderCreatePreview(){const files=[...qs("c_imagenes").files];qs("createPreview").innerHTML="";files.slice(0,5).forEach(f=>{const img=document.createElement("img");const rd=new FileReader();rd.onload=e=>img.src=e.target.result;rd.readAsDataURL(f);qs("createPreview").appendChild(img)})}
+async function saveCreatedReport(){const btn=qs("createSave"),files=[...qs("c_imagenes").files];qs("createError").textContent="";if(!qs("c_parque").value||!qs("c_cancha").value){qs("createError").textContent="Selecciona parque y cancha.";return}if(qs("c_descripcion").value.trim().length<10){qs("createError").textContent="La descripcion debe tener al menos 10 caracteres.";return}if(!files.length){qs("createError").textContent="Sube al menos una imagen.";return}btn.disabled=true;try{const fd=new FormData();fd.append("id_parque",qs("c_parque").value);fd.append("id_cancha",qs("c_cancha").value);fd.append("id_prioridad",qs("c_prioridad").value);fd.append("descripcion",qs("c_descripcion").value.trim());files.slice(0,5).forEach(f=>{fd.append("imagenes",f);fd.append("fechas_foto",new Date(f.lastModified).toISOString())});await api(`${API}/reportes`,{method:"POST",body:fd});closeModal("createModal");await loadReports(1);await loadAssigned();await loadManagerMetrics()}catch(e){qs("createError").textContent=e.message||"Error creando reporte"}finally{btn.disabled=false}}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")document.querySelectorAll(".modal-overlay.active").forEach(m=>m.classList.remove("active"))});
+document.querySelectorAll(".modal-overlay").forEach(m=>m.addEventListener("click",e=>{if(e.target===m)m.classList.remove("active")}));
+function applyHashFilters(){const hash=new URLSearchParams(window.location.hash.replace(/^#/,""));if(hash.get("section"))state.section=hash.get("section");["q","parque","cancha","gestor","estado","prioridad","fechaInicio","fechaFin"].forEach(id=>{const value=hash.get(id);if(value!==null&&qs(id))qs(id).value=value});if(hash.get("gestor"))state.selectedManager=Number(hash.get("gestor"))}
+["q","parque","cancha"].forEach(id=>{const el=qs(id);el?.addEventListener("input",()=>{if(id==="q")loadReportSuggestions();updateLocalSuggestions();scheduleSearch()});el?.addEventListener("keydown",e=>{if(e.key==="Enter")loadReports(1)})});
+["gestor","estado","prioridad","fechaInicio","fechaFin"].forEach(id=>qs(id)?.addEventListener("change",()=>{if(id==="gestor"){state.selectedManager=qs(id).value?Number(qs(id).value):null;state.section=qs(id).value?"todos":state.section;renderManagerSummary()}loadReports(1)}));
+function setupRealtime(){if(!window.io)return;const socket=window.io();socket.on("reportes:changed",()=>{loadReports(state.page);loadAssigned();loadManagerMetrics()})}
+(async function init(){await loadGestores();await loadParks();applyHashFilters();await loadReportSuggestions();await loadReports(1);await loadAssigned();await loadManagerMetrics();setupRealtime()})();
+</script>
+</body>
+</html>

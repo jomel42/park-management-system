@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parques La Paz | Usuario</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="/css/usuario.css">
+  <link rel="stylesheet" href="/css/system-responsive.css">
+  <script src="/js/system-form-helpers.js" defer></script>
+</head>
+<body class="user-layout">
+  <nav class="navbar">
+    <a href="#hero" class="logo">
+      <span class="logo-dot"></span>
+      Parques La Paz
+    </a>
+
+    <ul class="nav-links">
+      <li><a href="#hero">Inicio</a></li>
+      <li><a href="#mapa">Todos los parques</a></li>
+      <li><a href="#parques">Reportar</a></li>
+      <li><a href="#contacto">Contacto</a></li>
+    </ul>
+
+    <div class="nav-actions">
+      <span id="userName" class="user-pill">Usuario</span>
+      <button type="button" id="logoutBtn" class="btn-logout">Cerrar sesion</button>
+    </div>
+  </nav>
+
+  <section id="hero" class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-content">
+      <span class="hero-badge">Vista ciudadana activa</span>
+      <h1>Bienvenido, <span id="welcomeName">usuario</span>.</h1>
+      <p>
+        Consulta parques registrados, revisa su ubicacion real en el mapa y reporta
+        incidencias para que el equipo administrador pueda dar seguimiento.
+      </p>
+      <div class="hero-search">
+        <input type="search" id="buscadorParques" maxlength="80" list="parkSearchSuggestions" autocomplete="off" data-validate="park-search" placeholder="Buscar por nombre de parque o zona...">
+        <datalist id="parkSearchSuggestions"></datalist>
+        <select id="estadoFiltro" aria-label="Filtrar por estado">
+          <option value="abierto">Abiertos</option>
+          <option value="refaccion">En refaccion</option>
+          <option value="todos">Todos</option>
+          <option value="cerrado">Cerrados</option>
+        </select>
+      </div>
+    </div>
+
+    <aside class="session-card" aria-label="Datos de sesion">
+      <span>Sesion iniciada como</span>
+      <strong id="sessionFullName">Usuario ciudadano</strong>
+      <small id="sessionRole">Usuario</small>
+    </aside>
+  </section>
+
+  <main>
+    <section id="mapa" class="section mapa-section">
+      <div class="section-head">
+        <div>
+          <span class="section-label">Mapa urbano</span>
+          <h2 class="section-title">Todos los parques</h2>
+          <p class="section-sub">Los marcadores se generan con latitud y longitud registradas en MySQL.</p>
+        </div>
+      </div>
+
+      <div class="mapa-grid">
+        <div id="map" class="mapa-container" aria-label="Mapa de todos los parques"></div>
+        <div id="mapList" class="mapa-list"></div>
+      </div>
+    </section>
+
+    <section id="parques" class="section parques">
+      <div class="section-head">
+        <div>
+          <span class="section-label">Espacios verdes</span>
+          <h2 class="section-title">Parques desde la base de datos</h2>
+          <p class="section-sub">Selecciona un parque para ver su ubicacion, detalle y reportarlo si requiere atencion.</p>
+        </div>
+        <span id="parksCounter" class="counter-pill">Cargando...</span>
+      </div>
+
+      <div class="content-grid">
+        <div id="parksGrid" class="parks-grid">
+          <div class="empty-state">Cargando parques...</div>
+        </div>
+
+        <aside class="side-panel">
+          <div id="parkDetail" class="park-detail">
+            <span class="section-label">Detalle</span>
+            <p>Selecciona un parque para revisar su informacion.</p>
+          </div>
+
+          <form id="reportForm" class="report-form">
+            <span id="reportar" class="section-label">Reporte ciudadano</span>
+            <label for="reportParkName">
+              Parque seleccionado
+              <input type="text" id="reportParkName" readonly placeholder="Selecciona un parque">
+            </label>
+            <label for="reportCourtSelect">
+              Cancha especifica
+              <select id="reportCourtSelect" required disabled>
+                <option value="">Selecciona primero un parque</option>
+              </select>
+            </label>
+            <div id="courtCards" class="court-cards" aria-label="Canchas del parque seleccionado"></div>
+            <label for="reportText">
+              Descripcion del problema
+              <textarea id="reportText" rows="4" minlength="10" maxlength="1000" placeholder="Ej: luminaria danada, juegos en mal estado, basura acumulada..." required></textarea>
+            </label>
+            <div class="report-upload-field">
+              <span>Fotos del problema</span>
+             <div class="custom-file-upload">
+
+ <input
+  type="file"
+  id="reportImageFile"
+  accept="image/jpeg,image/png,image/webp"
+  multiple
+  hidden
+>
+
+  <label for="reportImageFile" class="file-upload-label">
+
+    <span class="upload-icon">📷</span>
+
+    <span id="fileUploadText">
+      Seleccionar imagen
+    </span>
+
+  </label>
+
+</div>
+
+<div id="imagePreviewContainer"></div>
+
+<small>
+JPG, PNG o WEBP. Maximo 5 imagenes de 4 MB cada una. La fecha y hora de cada foto debe estar dentro de los 10 minutos del reporte.
+</small>
+
+  <label for="reportImageFile" class="file-upload-label">
+
+    <span class="upload-icon">📷</span>
+
+    <span class="file-upload-text-duplicate">
+      Seleccionar imagen
+    </span>
+
+  </label>
+
+            </div>
+            <button type="submit">Enviar reporte</button>
+            <p id="reportMessage" class="form-message" role="alert"></p>
+          </form>
+        </aside>
+      </div>
+    </section>
+
+    <section id="contacto" class="section contacto">
+      <div>
+        <span class="section-label">Contacto</span>
+        <h2 class="section-title">Informacion de soporte</h2>
+        <p class="section-sub">Para urgencias fuera del sistema, contacta al equipo municipal de parques.</p>
+      </div>
+      <div class="contact-cards">
+        <article>
+          <span>Correo</span>
+          <strong>info@parqueslp.bo</strong>
+        </article>
+        <article>
+          <span>Telefono</span>
+          <strong>+591 2 123 4567</strong>
+        </article>
+        <article>
+          <span>Ubicacion</span>
+          <strong>La Paz, Bolivia</strong>
+        </article>
+      </div>
+    </section>
+  </main>
+
+<footer class="footer footer-rich" aria-label="Pie de pagina">
+  <div class="footer-brand">
+    <a href="#hero" class="logo"><span class="logo-dot"></span>Parques La Paz</a>
+    <p>Consulta ciudadana, mapa, horarios y reportes conectados a la base de datos municipal.</p>
+    <div class="footer-socials" aria-label="Redes municipales">
+      <a href="#">f</a>
+      <a href="#">ig</a>
+      <a href="#">x</a>
+    </div>
+  </div>
+  <div class="footer-col">
+    <h3>Navegacion</h3>
+    <a href="#hero">Inicio</a>
+    <a href="#mapa">Mapa</a>
+    <a href="#parques">Reportar</a>
+    <a href="#contacto">Contacto</a>
+  </div>
+  <div class="footer-col">
+    <h3>Atencion</h3>
+    <p>info@parqueslp.bo</p>
+    <p>+591 2 123 4567</p>
+    <p>La Paz, Bolivia</p>
+  </div>
+  <div class="footer-col">
+    <h3>Operacion</h3>
+    <p>Horarios automatizados por parque</p>
+    <p>Estados abiertos y cerrados visibles</p>
+    <p>Reportes ciudadanos con evidencia</p>
+  </div>
+  <div class="footer-bottom">
+    <span>Parques La Paz</span>
+    <p>Derechos reservados <strong id="currentYear">2026</strong></p>
+  </div>
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/js/usuario.js"></script>
+
+<link rel="stylesheet" href="/assets/css/chatbot.css?v=5">
+<script src="/assets/js/chatbot-widget.js?v=5"></script>
+
+
+</body>
+</html>

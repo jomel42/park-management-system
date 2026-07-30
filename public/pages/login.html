@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Iniciar sesion | Parques La Paz</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/login.css">
+  <link rel="stylesheet" href="/css/system-responsive.css">
+  <script src="/js/system-form-helpers.js" defer></script>
+</head>
+<body class="auth-body">
+  <nav class="auth-nav">
+    <a href="/" class="brand">
+      <span class="brand-mark"></span>
+      Parques La Paz
+    </a>
+    <div class="auth-nav-links">
+      <a href="/">Inicio</a>
+      <a href="/#parques">Parques</a>
+      <a href="/#contacto">Contacto</a>
+    </div>
+    <a href="/register" class="nav-cta">Crear cuenta</a>
+  </nav>
+
+  <main class="auth-shell">
+    <section class="auth-intro" aria-label="Bienvenida">
+      <span class="eyebrow">Ingreso por rol</span>
+      <h1>Bienvenido al sistema de gestion de parques.</h1>
+      <p>
+        Estas a punto de iniciar sesion en el sistema de gestion de parques.
+        Bienvenido: podras reportar parques a la alcaldia y dar seguimiento
+        ciudadano a los espacios disponibles.
+      </p>
+    </section>
+
+    <section class="auth-card" aria-label="Formulario de inicio de sesion">
+      <div class="auth-card-head">
+        <span>Acceso seguro</span>
+        <h2>Inicia sesion</h2>
+        <p>Usa el correo y contrasena registrados en el sistema.</p>
+      </div>
+
+      <form id="loginForm" class="auth-form" novalidate>
+        <label for="email">
+          Correo electronico
+          <input type="email" id="email" name="email" autocomplete="email" placeholder="usuario@correo.com" maxlength="120" required>
+        </label>
+
+        <label for="password">
+          Contrasena
+          <input type="password" id="password" name="password" autocomplete="current-password" placeholder="Tu contrasena" minlength="6" maxlength="72" required>
+        </label>
+
+        <button type="submit" class="btn-submit">Entrar al sistema</button>
+      </form>
+
+      <p id="error" class="form-message" role="alert"></p>
+
+      <div class="auth-switch">
+        <span>No tienes cuenta?</span>
+        <a href="/register">Registrate como ciudadano</a>
+      </div>
+    </section>
+  </main>
+
+  <script src="../js/login.js"></script>
+</body>
+</html>

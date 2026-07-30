@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registro ciudadano | Parques La Paz</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/login.css">
+  <link rel="stylesheet" href="/css/system-responsive.css">
+  <script src="/js/system-form-helpers.js" defer></script>
+</head>
+<body class="auth-body">
+  <nav class="auth-nav">
+    <a href="/" class="brand">
+      <span class="brand-mark"></span>
+      Parques La Paz
+    </a>
+    <div class="auth-nav-links">
+      <a href="/">Inicio</a>
+      <a href="/#parques">Parques</a>
+      <a href="/#contacto">Contacto</a>
+    </div>
+    <a href="/login" class="nav-cta">Iniciar sesion</a>
+  </nav>
+
+  <main class="auth-shell">
+    <section class="auth-intro" aria-label="Bienvenida al registro">
+      <span class="eyebrow">Registro ciudadano</span>
+      <h1>Crea tu cuenta para participar en el cuidado de los parques.</h1>
+      <p>
+        Al registrarte podras revisar parques disponibles, ubicar espacios en el mapa
+        y enviar reportes sobre problemas o necesidades de mantenimiento.
+      </p>
+
+      <div class="role-panel">
+        <article>
+          <strong>Consulta</strong>
+          <span>Parques abiertos, cerrados y en mantenimiento.</span>
+        </article>
+        <article>
+          <strong>Mapa</strong>
+          <span>Ubicaciones tomadas desde la base de datos.</span>
+        </article>
+        <article>
+          <strong>Reportes</strong>
+          <span>Alertas ciudadanas para seguimiento administrativo.</span>
+        </article>
+      </div>
+    </section>
+
+    <section class="auth-card register-card" aria-label="Formulario de registro">
+      <div class="auth-card-head">
+        <span>Nueva cuenta</span>
+        <h2>Registrate</h2>
+        <p>Los apellidos se guardan por separado para una gestion correcta.</p>
+      </div>
+
+      <form id="registerForm" class="auth-form form-grid" novalidate>
+        <label for="nombre" class="form-full">
+          Nombre
+          <input type="text" id="nombre" name="nombre" autocomplete="given-name" placeholder="Tu nombre" minlength="2" maxlength="60" required>
+        </label>
+
+        <label for="apellido_paterno">
+          Apellido paterno
+          <input type="text" id="apellido_paterno" name="apellido_paterno" autocomplete="family-name" placeholder="Paterno" minlength="2" maxlength="60" required>
+        </label>
+
+        <label for="apellido_materno">
+          Apellido materno
+          <input type="text" id="apellido_materno" name="apellido_materno" placeholder="Materno" minlength="2" maxlength="60" required>
+        </label>
+
+        <label for="email" class="form-full">
+          Correo electronico
+          <input type="email" id="email" name="email" autocomplete="email" placeholder="usuario@correo.com" maxlength="120" required>
+        </label>
+
+        <label for="password">
+          Contrasena
+          <input type="password" id="password" name="password" autocomplete="new-password" placeholder="Minimo 8, mayuscula, numero y simbolo" minlength="8" maxlength="72" required>
+        </label>
+
+        <label for="password_confirm">
+          Confirmar contrasena
+          <input type="password" id="password_confirm" name="password_confirm" autocomplete="new-password" placeholder="Repite la contrasena" minlength="8" maxlength="72" required>
+        </label>
+        <!-- PASO 2: verificación (oculto al inicio) -->
+<div id="verificacionStep" class="form-full" style="display:none">
+  <label for="codigo_verificacion" class="form-full">
+    Codigo de verificacion
+    <input
+      type="text"
+      id="codigo_verificacion"
+      name="codigo_verificacion"
+      placeholder="Ingresa el codigo de 6 digitos"
+      maxlength="6"
+      inputmode="numeric"
+      autocomplete="one-time-code"
+    >
+  </label>
+</div>
+        <button type="submit" id="submitBtn" class="btn-submit form-full">
+  Crear cuenta ciudadana
+</button>
+      </form>
+
+      <p id="error" class="form-message" role="alert"></p>
+
+      <div class="auth-switch">
+        <span>Ya tienes cuenta?</span>
+        <a href="/login">Inicia sesion</a>
+      </div>
+    </section>
+  </main>
+
+  <script src="../js/login.js"></script>
+</body>
+</html>

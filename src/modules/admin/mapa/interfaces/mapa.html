@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mapa de Parques</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Raleway:wght@300;600;800&family=IBM+Plex+Mono:wght@400;600&display=swap');
+
+    :root {
+      --verde-oscuro: #1a3a1a;
+      --verde-medio: #2d6a2d;
+      --verde-vivo: #4caf50;
+      --verde-claro: #a8d5a2;
+      --crema: #f5f0e8;
+      --texto: #1a2e1a;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Raleway', sans-serif;
+      background: var(--verde-oscuro);
+      color: var(--crema);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 24px;
+      background: linear-gradient(135deg, #0d200d, #1a3a1a);
+      border-bottom: 2px solid var(--verde-vivo);
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--verde-claro);
+      letter-spacing: 1px;
+    }
+
+    header span {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.75rem;
+      background: var(--verde-vivo);
+      color: #fff;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+
+    .contenedor {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ─────────────────────────────────────── */
+    .sidebar {
+      width: 300px;
+      background: #122012;
+      border-right: 1px solid #2d4a2d;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .sidebar-header {
+      padding: 16px;
+      background: #0d1a0d;
+      border-bottom: 1px solid #2d4a2d;
+    }
+
+    .sidebar-header h2 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--verde-claro);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .buscar {
+      width: 100%;
+      margin-top: 10px;
+      padding: 8px 12px;
+      background: #1a3a1a;
+      border: 1px solid #3a6a3a;
+      border-radius: 8px;
+      color: var(--crema);
+      font-family: 'Raleway', sans-serif;
+      font-size: 0.85rem;
+      outline: none;
+    }
+
+    .buscar::placeholder { color: #6a9a6a; }
+    .buscar:focus { border-color: var(--verde-vivo); }
+
+    .lista-parques {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+    }
+
+    .lista-parques::-webkit-scrollbar { width: 4px; }
+    .lista-parques::-webkit-scrollbar-track { background: #0d1a0d; }
+    .lista-parques::-webkit-scrollbar-thumb { background: var(--verde-medio); border-radius: 4px; }
+
+    .parque-item {
+      background: #1a3a1a;
+      border: 1px solid #2d4a2d;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .parque-item:hover {
+      border-color: var(--verde-vivo);
+      background: #1f4a1f;
+      transform: translateX(3px);
+    }
+
+    .parque-item.activo {
+      border-color: var(--verde-vivo);
+      background: #1f4a1f;
+      box-shadow: 0 0 12px rgba(76,175,80,0.25);
+    }
+
+    .parque-nombre {
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: var(--crema);
+      margin-bottom: 4px;
+    }
+
+    .parque-zona {
+      font-size: 0.75rem;
+      color: var(--verde-claro);
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+      margin-top: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge.abierto { background: #2d7a2d; color: #a8ffa8; }
+    .badge.cerrado { background: #7a2d2d; color: #ffa8a8; }
+
+    .parque-canchas {
+      font-size: 0.72rem;
+      color: #8aaa8a;
+      margin-top: 4px;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    /* ── Mapa ────────────────────────────────────────── */
+    #mapa {
+      flex: 1;
+    }
+
+    /* Leyenda */
+    .leyenda {
+      background: rgba(13,26,13,0.92);
+      border: 1px solid #3a6a3a;
+      border-radius: 8px;
+      padding: 10px 14px;
+    }
+
+    .leyenda h4 {
+      font-size: 0.75rem;
+      color: var(--verde-claro);
+      margin-bottom: 8px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .leyenda-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.75rem;
+      color: var(--crema);
+      margin-bottom: 5px;
+    }
+
+    .dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      border: 2px solid rgba(255,255,255,0.4);
+    }
+
+    .dot.verde { background: #4caf50; }
+    .dot.rojo  { background: #f44336; }
+
+    /* Popup personalizado */
+    .leaflet-popup-content-wrapper {
+      background: #0d200d !important;
+      border: 1px solid #4caf50 !important;
+      border-radius: 10px !important;
+      color: #f5f0e8 !important;
+    }
+
+    .leaflet-popup-tip {
+      background: #0d200d !important;
+    }
+
+    .popup-titulo {
+      font-weight: 800;
+      font-size: 1rem;
+      color: #a8d5a2;
+      margin-bottom: 6px;
+    }
+
+    .popup-info {
+      font-size: 0.8rem;
+      color: #c5d5c5;
+      line-height: 1.6;
+    }
+
+    .popup-badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-top: 6px;
+    }
+
+    .popup-badge.abierto { background: #2d7a2d; color: #a8ffa8; }
+    .popup-badge.cerrado { background: #7a2d2d; color: #ffa8a8; }
+
+    .sin-datos {
+      text-align: center;
+      color: #6a9a6a;
+      font-size: 0.85rem;
+      padding: 30px 16px;
+    }
+
+    .cargando {
+      text-align: center;
+      color: #6a9a6a;
+      padding: 30px 16px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.8rem;
+    }
+
+    .cargando::after {
+      content: '';
+      animation: puntos 1.5s infinite;
+    }
+
+    @keyframes puntos {
+      0%   { content: '.'; }
+      33%  { content: '..'; }
+      66%  { content: '...'; }
+    }
+  </style>
+  <link rel="stylesheet" href="/css/system-responsive.css">
+  <script src="/js/system-form-helpers.js" defer></script>
+</head>
+<body>
+
+<header>
+  <span>🌳</span>
+  <h1>Sistema de Parques</h1>
+  <span id="total-badge">Cargando...</span>
+</header>
+
+<div class="contenedor">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h2>Parques registrados</h2>
+      <input class="buscar" type="text" id="buscar" list="sugerencias-mapa-admin" maxlength="80" autocomplete="off" placeholder="Buscar parque..." />
+      <datalist id="sugerencias-mapa-admin"></datalist>
+    </div>
+    <div class="lista-parques" id="lista-parques">
+      <div class="cargando">Cargando parques</div>
+    </div>
+  </div>
+
+  <div id="mapa"></div>
+</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+  // ── Inicializar mapa centrado en La Paz, Bolivia ──────────────────────────
+  // (Cambia las coordenadas al centro de tu ciudad si es diferente)
+  const mapa = L.map('mapa', {
+    zoomAnimation: true,
+    fadeAnimation: true,
+    markerZoomAnimation: true,
+    easeLinearity: 0.25
+  }).setView([-16.5000, -68.1500], 13);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap',
+    maxZoom: 19,
+  }).addTo(mapa);
+
+  // ── Iconos personalizados ─────────────────────────────────────────────────
+  function crearIcono(abierto) {
+    return L.divIcon({
+      className: '',
+      html: `
+        <div style="
+          width:36px; height:36px;
+          background:${abierto ? '#4caf50' : '#f44336'};
+          border:3px solid #fff;
+          border-radius:50% 50% 50% 0;
+          transform:rotate(-45deg);
+          box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+        "></div>
+      `,
+      iconSize: [36, 36],
+      iconAnchor: [18, 36],
+      popupAnchor: [0, -36],
+    });
+  }
+
+  // ── Leyenda ───────────────────────────────────────────────────────────────
+  const leyenda = L.control({ position: 'bottomright' });
+  leyenda.onAdd = () => {
+    const div = L.DomUtil.create('div', 'leyenda');
+    div.innerHTML = `
+      <h4>Estado del parque</h4>
+      <div class="leyenda-item"><div class="dot verde"></div> Abierto</div>
+      <div class="leyenda-item"><div class="dot rojo"></div> Cerrado</div>
+    `;
+    return div;
+  };
+  leyenda.addTo(mapa);
+
+  // ── Variables globales ────────────────────────────────────────────────────
+  let marcadores = [];
+  let parquesData = [];
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function normalizarBusqueda(value) {
+    return String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function limpiarBusqueda(value) {
+    return String(value || "")
+      .replace(/[^\p{L}\s'-]/gu, "")
+      .replace(/\s{2,}/g, " ")
+      .slice(0, 80);
+  }
+
+  function valoresBusquedaParque(parque) {
+    return [parque.nombre, parque.nombre_zona].filter(Boolean).map(String);
+  }
+
+  function actualizarSugerenciasMapa(query = normalizarBusqueda(document.getElementById('buscar')?.value)) {
+    const datalist = document.getElementById('sugerencias-mapa-admin');
+    if (!datalist) return;
+    const vistos = new Set();
+    const sugerencias = [];
+
+    parquesData.forEach(parque => {
+      valoresBusquedaParque(parque).forEach(value => {
+        const texto = value.trim();
+        const key = normalizarBusqueda(texto);
+        if (!texto || vistos.has(key)) return;
+        if (query && !key.startsWith(query) && !key.includes(query)) return;
+        vistos.add(key);
+        sugerencias.push({ texto, starts: !query || key.startsWith(query) });
+      });
+    });
+
+    sugerencias.sort((a, b) => Number(b.starts) - Number(a.starts) || a.texto.localeCompare(b.texto, "es"));
+    datalist.innerHTML = sugerencias.slice(0, 10).map(item => `<option value="${escapeHtml(item.texto)}"></option>`).join("");
+  }
+
+  // ── Cargar parques desde el backend ──────────────────────────────────────
+  async function cargarParques() {
+    try {
+      // ⚠️ Cambia la URL si tu backend corre en otro puerto
+      const res = await fetch('/api/parques/mapa');
+      const json = await res.json();
+
+      if (!json.success) throw new Error("Error en la respuesta del servidor");
+
+      parquesData = json.data;
+      actualizarSugerenciasMapa("");
+      renderizarLista(parquesData);
+      renderizarMarcadores(parquesData);
+      document.getElementById('total-badge').textContent = `${parquesData.length} parques`;
+
+    } catch (err) {
+      console.error(err);
+      // Si no hay backend aún, cargamos datos de prueba
+      cargarDatosDePrueba();
+    }
+  }
+
+  // ── Datos de prueba (para cuando el backend aún no está listo) ────────────
+  function cargarDatosDePrueba() {
+    parquesData = [
+      { id_parque: 1, nombre: "Parque Central", descripcion: "Parque principal de la ciudad", latitud: -16.5000, longitud: -68.1500, nombre_zona: "Zona Centro", esta_abierto: 1, total_canchas: 3 },
+      { id_parque: 2, nombre: "Parque El Montículo", descripcion: "Vista panorámica de la ciudad", latitud: -16.5070, longitud: -68.1180, nombre_zona: "Zona Sur", esta_abierto: 1, total_canchas: 1 },
+      { id_parque: 3, nombre: "Parque Triangular", descripcion: "Área recreativa norte", latitud: -16.4850, longitud: -68.1400, nombre_zona: "Zona Norte", esta_abierto: 0, total_canchas: 2 },
+    ];
+    actualizarSugerenciasMapa("");
+    renderizarLista(parquesData);
+    renderizarMarcadores(parquesData);
+    document.getElementById('total-badge').textContent = `${parquesData.length} parques (demo)`;
+  }
+
+  // ── Renderizar lista lateral ──────────────────────────────────────────────
+  function renderizarLista(lista) {
+    const contenedor = document.getElementById('lista-parques');
+
+    if (lista.length === 0) {
+      contenedor.innerHTML = '<div class="sin-datos">No se encontraron parques</div>';
+      return;
+    }
+
+    contenedor.innerHTML = lista.map(p => `
+      <div class="parque-item" onclick="irAParque(${p.id_parque})" id="item-${p.id_parque}">
+        <div class="parque-nombre">🌳 ${p.nombre}</div>
+        <div class="parque-zona">📍 ${p.nombre_zona}</div>
+        <div class="parque-canchas">🏟️ ${p.total_canchas} cancha(s)</div>
+        <span class="badge ${p.esta_abierto ? 'abierto' : 'cerrado'}">
+          ${p.esta_abierto ? '✅ Abierto' : '❌ Cerrado'}
+        </span>
+      </div>
+    `).join('');
+  }
+
+  // ── Renderizar marcadores en el mapa ──────────────────────────────────────
+  function renderizarMarcadores(lista) {
+    // Limpiar marcadores anteriores
+    marcadores.forEach(m => mapa.removeLayer(m));
+    marcadores = [];
+
+    lista.forEach(p => {
+      const abierto = Number(p.abierto_ahora ?? p.esta_abierto) === 1;
+      const icono = crearIcono(abierto);
+      const marcador = L.marker([p.latitud, p.longitud], { icon: icono })
+        .addTo(mapa)
+        .bindPopup(`
+          <div class="popup-titulo">🌳 ${p.nombre}</div>
+          <div class="popup-info">
+            📍 Zona: <b>${p.nombre_zona}</b><br>
+            🏟️ Canchas: <b>${p.total_canchas}</b><br>
+            📝 ${p.descripcion || 'Sin descripción'}
+          </div>
+          <span class="popup-badge ${p.esta_abierto ? 'abierto' : 'cerrado'}">
+            ${p.esta_abierto ? '✅ Abierto' : '❌ Cerrado'}
+          </span>
+        `);
+
+      marcador._parqueId = p.id_parque;
+      marcadores.push(marcador);
+    });
+
+    // Ajustar vista al grupo de marcadores
+    if (marcadores.length > 0) {
+      const grupo = L.featureGroup(marcadores);
+      if (marcadores.length === 1) {
+        mapa.flyTo(marcadores[0].getLatLng(), 16, { animate: true, duration: 1, easeLinearity: 0.25 });
+      } else {
+        mapa.fitBounds(grupo.getBounds().pad(0.15), {
+          animate: true,
+          duration: 0.95,
+          easeLinearity: 0.25,
+          padding: [24, 24]
+        });
+      }
+    }
+  }
+
+  // ── Ir a un parque al hacer clic en la lista ──────────────────────────────
+  function irAParque(id) {
+    const parque = parquesData.find(p => p.id_parque === id);
+    if (!parque) return;
+
+    // Resaltar en lista
+    document.querySelectorAll('.parque-item').forEach(el => el.classList.remove('activo'));
+    const item = document.getElementById(`item-${id}`);
+    if (item) {
+      item.classList.add('activo');
+      item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // Centrar mapa y abrir popup
+    mapa.flyTo([parque.latitud, parque.longitud], 16, { animate: true, duration: 1.15, easeLinearity: 0.25 });
+    const marcador = marcadores.find(m => m._parqueId === id);
+    if (marcador) window.setTimeout(() => marcador.openPopup(), 420);
+  }
+
+  // ── Búsqueda en tiempo real ───────────────────────────────────────────────
+  document.getElementById('buscar').addEventListener('input', (e) => {
+    const limpio = limpiarBusqueda(e.target.value);
+    if (e.target.value !== limpio) e.target.value = limpio;
+    const q = normalizarBusqueda(limpio);
+    const resultados = [];
+    parquesData.forEach(p => {
+      const valores = valoresBusquedaParque(p).map(normalizarBusqueda);
+      const match = !q || valores.some(value => value.includes(q));
+      const starts = q && valores.some(value => value.startsWith(q));
+      if (match) resultados.push({ p, score: starts ? 0 : 1 });
+    });
+    const filtrados = q
+      ? resultados.sort((a, b) => a.score - b.score || String(a.p.nombre || "").localeCompare(String(b.p.nombre || ""), "es")).map(item => item.p)
+      : resultados.map(item => item.p);
+
+    renderizarLista(filtrados);
+    renderizarMarcadores(filtrados);
+    actualizarSugerenciasMapa(q);
+  });
+
+  // ── Inicio ────────────────────────────────────────────────────────────────
+  cargarParques();
+</script>
+</body>
+</html>

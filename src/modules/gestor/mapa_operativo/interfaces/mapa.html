@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mapa Operativo | Gestor</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;800&family=IBM+Plex+Mono:wght@400;600&display=swap');
+
+    :root {
+      --bg-principal: #0d130f;      
+      --bg-tarjetas: #161e18;       
+      --texto-titulo: #e1ebd9;      
+      --texto-secundario: #82967e;  
+      --boton-amarillo: #efc45e;    
+      --borde-suave: #243326; 
+      --badge-resuelto: #61b369;
+      --badge-critico: #d96c6c;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Raleway', sans-serif; color: var(--texto-titulo); padding: 20px; background: transparent; height: 100vh; display: flex; flex-direction: column; }
+
+    .header-acciones { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: var(--bg-tarjetas); padding: 20px; border-radius: 12px; border: 1px solid var(--borde-suave); flex-shrink: 0;}
+    
+    /* CONTENEDOR DEL MAPA Y PANEL LATERAL */
+    .mapa-container { display: flex; gap: 20px; flex: 1; min-height: 0; }
+    
+    .panel-lateral { width: 300px; background: var(--bg-tarjetas); border: 1px solid var(--borde-suave); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
+    .panel-lateral::-webkit-scrollbar { width: 6px; }
+    .panel-lateral::-webkit-scrollbar-thumb { background: var(--borde-suave); border-radius: 3px; }
+
+    .buscador { padding: 12px; border-radius: 8px; border: 1px solid var(--borde-suave); background: var(--bg-principal); color: var(--texto-titulo); width: 100%; font-family: 'IBM Plex Mono', monospace; outline: none; transition: 0.3s; }
+    .buscador:focus { border-color: var(--boton-amarillo); box-shadow: 0 0 5px rgba(239, 196, 94, 0.2); }
+
+    .card-parque { background: var(--bg-principal); border: 1px solid var(--borde-suave); border-radius: 8px; padding: 15px; cursor: pointer; transition: 0.3s; }
+    .card-parque:hover { border-color: var(--boton-amarillo); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+    .card-parque h4 { font-size: 0.95rem; font-weight: 800; color: var(--texto-titulo); margin-bottom: 5px; }
+    .card-parque p { font-size: 0.75rem; color: var(--texto-secundario); font-family: 'IBM Plex Mono', monospace; }
+    
+    .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+    .dot-open { background-color: var(--badge-resuelto); box-shadow: 0 0 5px var(--badge-resuelto); }
+    .dot-closed { background-color: var(--badge-critico); box-shadow: 0 0 5px var(--badge-critico); }
+
+    /* EL MAPA EN SÍ */
+    #map { flex: 1; border-radius: 12px; border: 1px solid var(--borde-suave); z-index: 1; }
+
+    /* POPUPS DEL MAPA (DARK THEME) */
+    .leaflet-popup-content-wrapper { background: var(--bg-tarjetas); color: var(--texto-titulo); border: 1px solid var(--borde-suave); border-radius: 8px; }
+    .leaflet-popup-tip { background: var(--bg-tarjetas); border: 1px solid var(--borde-suave); }
+    .leaflet-popup-content h3 { font-family: 'Raleway', sans-serif; font-size: 1.1rem; font-weight: 800; color: var(--boton-amarillo); margin-bottom: 5px; margin-top: 0; }
+    .leaflet-popup-content p { font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; color: var(--texto-secundario); margin: 0; }
+    .leaflet-container a.leaflet-popup-close-button { color: var(--texto-titulo); }
+    @media (max-width: 780px) {
+      body { height: auto; min-height: 100vh; padding: 12px; }
+      .header-acciones { align-items: flex-start; flex-direction: column; }
+      .mapa-container { flex-direction: column; min-height: 720px; }
+      .panel-lateral { width: 100%; max-height: 280px; }
+      #map { min-height: 420px; }
+    }
+  </style>
+  <link rel="stylesheet" href="/css/system-responsive.css">
+  <script src="/js/system-form-helpers.js" defer></script>
+</head>
+<body>
+
+  <div class="header-acciones">
+    <div>
+      <h3 style="color: var(--texto-titulo); margin-bottom: 5px; font-weight: 800;">🗺️ Mapa Operativo de Rutas</h3>
+      <p style="font-size: 0.85rem; color: var(--texto-secundario);">Localización satelital para logística de mantenimientos en La Paz.</p>
+    </div>
+  </div>
+
+  <div class="mapa-container">
+    <div class="panel-lateral">
+      <input type="text" class="buscador" id="buscarParque" list="sugerencias-parques-mapa" maxlength="80" autocomplete="off" placeholder="Buscar ubicación..." onkeyup="filtrarLista()">
+      <datalist id="sugerencias-parques-mapa"></datalist>
+      <div id="listaParques">
+        </div>
+    </div>
+    
+    <div id="map"></div>
+  </div>
+
+<script>
+let map;
+let parquesGlobales = [];
+let marcadores = [];
+
+// Coordenadas exactas de La Paz, Bolivia
+const LA_PAZ_COORDS = [-16.4897, -68.1193];
+
+function inicializarMapa() {
+  // Inicializamos el mapa centrado en La Paz con un zoom de ciudad (13)
+  map = L.map('map', {
+    zoomAnimation: true,
+    fadeAnimation: true,
+    markerZoomAnimation: true,
+    easeLinearity: 0.25
+  }).setView(LA_PAZ_COORDS, 13);
+
+  // CAPA BASE PREMIUM (Dark Mode de CartoDB)
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+    subdomains: 'abcd',
+    maxZoom: 20
+  }).addTo(map);
+}
+
+function obtenerHeaders(){
+  return { "Authorization": `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" };
+}
+
+function normalizarBusqueda(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function limpiarBusqueda(value) {
+  return String(value || "")
+    .replace(/[^\p{L}\s'-]/gu, "")
+    .replace(/\s{2,}/g, " ")
+    .slice(0, 80);
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function valoresBusquedaParque(parque) {
+  return [parque.nombre, parque.zona].filter(Boolean).map(String);
+}
+
+function actualizarSugerenciasMapa(query = normalizarBusqueda(document.getElementById('buscarParque')?.value)) {
+  const datalist = document.getElementById('sugerencias-parques-mapa');
+  if (!datalist) return;
+  const vistos = new Set();
+  const sugerencias = [];
+
+  parquesGlobales.forEach(parque => {
+    valoresBusquedaParque(parque).forEach(value => {
+      const texto = value.trim();
+      const key = normalizarBusqueda(texto);
+      if (!texto || vistos.has(key)) return;
+      if (query && !key.startsWith(query) && !key.includes(query)) return;
+      vistos.add(key);
+      sugerencias.push({ texto, starts: !query || key.startsWith(query) });
+    });
+  });
+
+  sugerencias.sort((a, b) => Number(b.starts) - Number(a.starts) || a.texto.localeCompare(b.texto, "es"));
+  datalist.innerHTML = sugerencias.slice(0, 10).map(item => `<option value="${escapeHtml(item.texto)}"></option>`).join("");
+}
+
+async function cargarParques() {
+  try {
+    // Usamos tu nueva arquitectura por dominios
+    const res = await fetch('/api/gestor/parques', { headers: obtenerHeaders() });
+    const data = await res.json();
+    
+    if(data.ok) {
+      // Como tu BD no tiene lat/lng reales, simularemos posiciones 
+      // alrededor del centro de La Paz para que el mapa funcione perfectamente
+      parquesGlobales = data.data.map(p => {
+        return {
+          ...p,
+          lat: LA_PAZ_COORDS[0] + (Math.random() - 0.5) * 0.05,
+          lng: LA_PAZ_COORDS[1] + (Math.random() - 0.5) * 0.05
+        };
+      });
+      actualizarSugerenciasMapa("");
+      renderizarLista(parquesGlobales);
+      colocarMarcadores(parquesGlobales);
+      ajustarMapaAMarcadores();
+    }
+  } catch (error) { console.error("Error cargando parques:", error); }
+}
+
+function renderizarLista(datos) {
+  const contenedor = document.getElementById('listaParques');
+  contenedor.innerHTML = '';
+  
+  datos.forEach(parque => {
+    const isOpen = Number(parque.abierto_ahora ?? parque.esta_abierto) === 1;
+    const card = document.createElement('div');
+    card.className = 'card-parque';
+    card.onclick = () => enfocarMapa(parque.lat, parque.lng);
+    card.innerHTML = `
+      <h4>${parque.nombre}</h4>
+      <p>📍 ${parque.zona}</p>
+      <p style="margin-top:8px;">
+        <span class="status-dot ${isOpen ? 'dot-open' : 'dot-closed'}"></span>
+        ${isOpen ? 'Acceso Abierto' : 'Mantenimiento / Cerrado'}
+      </p>
+      <p>Horario: ${parque.hora_apertura || '06:00'}-${parque.hora_cierre || '20:00'}</p>
+    `;
+    contenedor.appendChild(card);
+  });
+}
+
+function colocarMarcadores(datos) {
+  // Limpiamos marcadores viejos
+  marcadores.forEach(m => map.removeLayer(m));
+  marcadores = [];
+
+  datos.forEach(parque => {
+    const isOpen = Number(parque.abierto_ahora ?? parque.esta_abierto) === 1;
+    
+    // Icono personalizado SVG
+    const color = isOpen ? '#61b369' : '#d96c6c';
+    const svgIcon = L.divIcon({
+      className: 'custom-icon',
+      html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="36" height="36">
+               <path fill="${color}" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+             </svg>`,
+      iconSize: [36, 36],
+      iconAnchor: [18, 36],
+      popupAnchor: [0, -36]
+    });
+
+    const marker = L.marker([parque.lat, parque.lng], { icon: svgIcon }).addTo(map);
+    
+    marker.bindPopup(`
+      <h3>${parque.nombre}</h3>
+      <p>Zona: ${parque.zona}</p>
+      <p style="color: ${color}; margin-top:5px; font-weight:bold;">${isOpen ? 'Abierto' : 'Cerrado'}</p>
+      <p>Horario: ${parque.hora_apertura || '06:00'}-${parque.hora_cierre || '20:00'}</p>
+    `);
+    
+    marcadores.push(marker);
+  });
+}
+
+function enfocarMapa(lat, lng) {
+  // Animación de vuelo (FlyTo) de Leaflet
+  map.flyTo([lat, lng], 16, { animate: true, duration: 1.35, easeLinearity: 0.25 });
+}
+
+function ajustarMapaAMarcadores() {
+  if (!marcadores.length) {
+    map.flyTo(LA_PAZ_COORDS, 13, { animate: true, duration: 0.9, easeLinearity: 0.25 });
+    return;
+  }
+
+  if (marcadores.length === 1) {
+    map.flyTo(marcadores[0].getLatLng(), 16, { animate: true, duration: 1, easeLinearity: 0.25 });
+    return;
+  }
+
+  const group = new L.featureGroup(marcadores);
+  map.fitBounds(group.getBounds().pad(0.1), {
+    animate: true,
+    duration: 0.95,
+    easeLinearity: 0.25,
+    padding: [22, 22]
+  });
+}
+
+function filtrarLista() {
+  const input = document.getElementById('buscarParque');
+  const limpio = limpiarBusqueda(input.value);
+  if (input.value !== limpio) input.value = limpio;
+  const texto = normalizarBusqueda(limpio);
+  const resultados = [];
+  parquesGlobales.forEach(p => {
+    const valores = valoresBusquedaParque(p).map(normalizarBusqueda);
+    const match = !texto || valores.some(value => value.includes(texto));
+    const starts = texto && valores.some(value => value.startsWith(texto));
+    if (match) resultados.push({ p, score: starts ? 0 : 1 });
+  });
+  const filtrados = texto
+    ? resultados.sort((a, b) => a.score - b.score || String(a.p.nombre || "").localeCompare(String(b.p.nombre || ""), "es")).map(item => item.p)
+    : resultados.map(item => item.p);
+  
+  renderizarLista(filtrados);
+  colocarMarcadores(filtrados);
+  actualizarSugerenciasMapa(texto);
+  ajustarMapaAMarcadores();
+}
+
+// ARRANQUE
+window.onload = () => {
+  inicializarMapa();
+  cargarParques();
+};
+</script>
+</body>
+</html>

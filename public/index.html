@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Parques La Paz</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    /* ─── TOKENS ─────────────────────────────────────────── */
+    :root {
+      --bg:        #0a0f0a;
+      --surface:   #111811;
+      --card:      #161d16;
+      --border:    rgba(255,255,255,0.07);
+      --green-deep:#1a3a1a;
+      --green-mid: #2e6b35;
+      --green-viv: #3d8b46;
+      --gold:      #c9a84c;
+      --gold-lt:   #e8c97a;
+      --white:     #f0f4f0;
+      --muted:     #7a8f7a;
+      --font-disp: 'Cormorant Garamond', serif;
+      --font-body: 'DM Sans', sans-serif;
+      --radius:    14px;
+      --ease:      cubic-bezier(.25,.8,.25,1);
+    }
+
+    /* ─── RESET ──────────────────────────────────────────── */
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body {
+      background: var(--bg);
+      color: var(--white);
+      font-family: var(--font-body);
+      padding-top: 72px;
+      overflow-x: hidden;
+    }
+
+    /* ─── NOISE OVERLAY ──────────────────────────────────── */
+    body::before {
+      content:'';
+      position:fixed; inset:0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      background-size: 200px;
+      pointer-events:none; z-index:9999; opacity:.5;
+    }
+
+    /* ─── NAVBAR ─────────────────────────────────────────── */
+    .navbar {
+      position: fixed; top:0; width:100%; z-index:1000;
+      display: flex; align-items:center; justify-content:space-between;
+      padding: 0 48px; height: 72px;
+      background: rgba(10,15,10,0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+    .logo {
+      font-family: var(--font-disp);
+      font-size: 1.5rem; font-weight: 600;
+      color: var(--white); letter-spacing:.02em;
+      display:flex; align-items:center; gap:10px;
+    }
+    .logo-dot { width:8px; height:8px; background:var(--gold); border-radius:50%; }
+    .nav-links { display:flex; gap:32px; list-style:none; }
+    .nav-links a {
+      color: var(--muted); text-decoration:none;
+      font-size:.85rem; letter-spacing:.05em; text-transform:uppercase;
+      transition: color .3s var(--ease);
+    }
+    .nav-links a:hover { color: var(--white); }
+    .nav-actions { display:flex; gap:12px; align-items:center; }
+    .btn-login {
+      padding: 8px 20px; border: 1px solid var(--border);
+      color: var(--muted); border-radius:8px; text-decoration:none;
+      font-size:.83rem; letter-spacing:.04em;
+      transition: all .3s var(--ease);
+    }
+    .btn-login:hover { border-color:var(--gold); color:var(--gold); }
+    .btn-register {
+      padding: 8px 20px; background:var(--gold);
+      color:#0a0f0a; border-radius:8px; text-decoration:none;
+      font-size:.83rem; font-weight:500; letter-spacing:.04em;
+      transition: all .3s var(--ease);
+    }
+    .btn-register:hover { background:var(--gold-lt); }
+
+    /* ─── HERO ───────────────────────────────────────────── */
+    .hero {
+      min-height: 100vh;
+      position: relative;
+      display: flex; align-items:center; justify-content:center;
+      overflow: hidden;
+    }
+    .hero-bg {
+      position:absolute; inset:0;
+      background: url("https://facts.net/wp-content/uploads/2023/07/34-facts-about-la-paz-1688475396.jpg") center/cover;
+      transform: scale(1.05);
+      animation: heroZoom 20s ease-in-out infinite alternate;
+    }
+    @keyframes heroZoom { from{transform:scale(1.05)} to{transform:scale(1.12)} }
+    .hero-bg::after {
+      content:'';
+      position:absolute; inset:0;
+      background: linear-gradient(160deg,
+        rgba(10,15,10,0.75) 0%,
+        rgba(15,35,15,0.55) 50%,
+        rgba(10,15,10,0.88) 100%);
+    }
+    .hero-content {
+      position:relative; z-index:2;
+      text-align:center; max-width:780px; padding:0 24px;
+    }
+    .hero-badge {
+      display:inline-flex; align-items:center; gap:8px;
+      border: 1px solid var(--gold); border-radius:100px;
+      padding: 6px 18px; margin-bottom: 28px;
+      font-size:.78rem; color:var(--gold); letter-spacing:.1em; text-transform:uppercase;
+    }
+    .hero-badge::before {
+      content:''; width:6px; height:6px;
+      background:var(--gold); border-radius:50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%,100%{opacity:1;transform:scale(1)}
+      50%{opacity:.4;transform:scale(1.4)}
+    }
+    .hero h1 {
+      font-family: var(--font-disp);
+      font-size: clamp(2.8rem, 7vw, 5.5rem);
+      font-weight: 700; line-height: 1.05;
+      letter-spacing:-.01em; margin-bottom: 20px;
+    }
+    .hero h1 em { font-style:normal; color:var(--gold); }
+    .hero p {
+      color: var(--muted); font-size:1.05rem;
+      line-height:1.7; max-width:480px; margin:0 auto 40px;
+    }
+    .hero-ctas { display:flex; gap:14px; justify-content:center; flex-wrap:wrap; }
+    .cta-primary {
+      padding:14px 36px; background:var(--gold);
+      color:#0a0f0a; font-weight:500; border-radius:10px;
+      text-decoration:none; font-size:.9rem; letter-spacing:.04em;
+      transition:all .3s var(--ease);
+    }
+    .cta-primary:hover { background:var(--gold-lt); transform:translateY(-2px); box-shadow:0 12px 30px rgba(201,168,76,.3); }
+    .cta-secondary {
+      padding:14px 36px; border:1px solid var(--border);
+      color:var(--white); border-radius:10px;
+      text-decoration:none; font-size:.9rem; letter-spacing:.04em;
+      transition:all .3s var(--ease);
+    }
+    .cta-secondary:hover { border-color:rgba(255,255,255,.25); transform:translateY(-2px); }
+    .hero-stats {
+      position:absolute; bottom:40px; left:50%; transform:translateX(-50%);
+      display:flex; gap:48px; z-index:2;
+    }
+    .stat { text-align:center; }
+    .stat-n {
+      font-family:var(--font-disp);
+      font-size:2rem; font-weight:700; color:var(--gold);
+    }
+    .stat-l { font-size:.72rem; color:var(--muted); letter-spacing:.08em; text-transform:uppercase; }
+
+    /* ─── SECTION BASE ───────────────────────────────────── */
+    section { padding: 100px 48px; }
+    .section-label {
+      display:inline-flex; align-items:center; gap:10px;
+      color:var(--gold); font-size:.75rem; letter-spacing:.15em;
+      text-transform:uppercase; margin-bottom:16px;
+    }
+    .section-label::before {
+      content:''; width:28px; height:1px; background:var(--gold);
+    }
+    .section-title {
+      font-family:var(--font-disp);
+      font-size:clamp(2rem, 4vw, 3rem);
+      font-weight:700; line-height:1.1;
+      margin-bottom:12px;
+    }
+    .section-sub { color:var(--muted); font-size:.92rem; line-height:1.7; max-width:500px; }
+
+    /* ─── PARQUES ─────────────────────────────────────────── */
+    .parques { background:var(--surface); }
+    .parques-header { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:60px; gap:20px; flex-wrap:wrap; }
+    .parques-header-left {}
+    .view-all { color:var(--gold); font-size:.83rem; text-decoration:none; border-bottom:1px solid var(--gold); padding-bottom:2px; letter-spacing:.05em; }
+
+    /* FEATURED */
+    .featured-grid {
+      display:grid; grid-template-columns:1fr 1fr; gap:2px;
+      border-radius:var(--radius); overflow:hidden;
+      margin-bottom:3px;
+    }
+    .featured-main {
+      position:relative; height:480px; overflow:hidden; cursor:pointer;
+    }
+    .featured-main img {
+      width:100%; height:100%; object-fit:cover;
+      transition:transform .7s var(--ease);
+    }
+    .featured-main:hover img { transform:scale(1.04); }
+    .featured-main-overlay {
+      position:absolute; inset:0;
+      background:linear-gradient(to top, rgba(10,15,10,.92) 0%, transparent 60%);
+    }
+    .featured-main-info {
+      position:absolute; bottom:0; left:0; padding:32px;
+    }
+    .park-tag {
+      display:inline-block; padding:4px 12px;
+      background:var(--gold); color:#0a0f0a;
+      border-radius:100px; font-size:.72rem; font-weight:500;
+      letter-spacing:.06em; text-transform:uppercase; margin-bottom:12px;
+    }
+    .featured-main-info h3 {
+      font-family:var(--font-disp); font-size:1.7rem; font-weight:700; margin-bottom:6px;
+    }
+    .featured-main-info p { color:rgba(240,244,240,.65); font-size:.85rem; line-height:1.6; }
+
+    /* SIDE CARDS */
+    .featured-side { display:grid; grid-template-rows:1fr 1fr; gap:2px; }
+    .side-card { position:relative; overflow:hidden; cursor:pointer; }
+    .side-card img { width:100%; height:100%; object-fit:cover; transition:transform .7s var(--ease); }
+    .side-card:hover img { transform:scale(1.05); }
+    .side-card-overlay {
+      position:absolute; inset:0;
+      background:linear-gradient(to top, rgba(10,15,10,.85) 0%, transparent 55%);
+    }
+    .side-card-info { position:absolute; bottom:0; left:0; padding:20px; }
+    .side-card-info h4 { font-family:var(--font-disp); font-size:1.1rem; margin-bottom:4px; }
+    .side-card-info p { color:var(--muted); font-size:.78rem; }
+
+    /* CARDS SCROLL */
+    .scroll-section { margin-top:3px; }
+    .scroll-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+    .scroll-title { font-size:.8rem; color:var(--muted); letter-spacing:.08em; text-transform:uppercase; }
+    .scroll-btns { display:flex; gap:8px; }
+    .scroll-btn {
+      width:36px; height:36px; border-radius:50%;
+      border:1px solid var(--border); background:transparent;
+      color:var(--white); font-size:1rem; cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      transition:all .25s var(--ease);
+    }
+    .scroll-btn:hover { border-color:var(--gold); color:var(--gold); }
+    .cards-track { display:flex; gap:16px; overflow-x:auto; scroll-behavior:smooth; padding-bottom:8px; }
+    .cards-track::-webkit-scrollbar { height:3px; }
+    .cards-track::-webkit-scrollbar-track { background:var(--border); border-radius:99px; }
+    .cards-track::-webkit-scrollbar-thumb { background:var(--gold); border-radius:99px; }
+    .mini-card {
+      min-width:220px; background:var(--card);
+      border:1px solid var(--border); border-radius:12px;
+      overflow:hidden; cursor:pointer;
+      transition:all .3s var(--ease); flex-shrink:0;
+    }
+    .mini-card:hover { border-color:rgba(201,168,76,.3); transform:translateY(-4px); }
+    .mini-card img { width:100%; height:130px; object-fit:cover; }
+    .mini-card-body { padding:14px; }
+    .mini-card-body h5 { font-size:.88rem; font-weight:500; margin-bottom:4px; }
+    .mini-card-body p { font-size:.75rem; color:var(--muted); line-height:1.5; }
+
+    /* ─── LISTADO ─────────────────────────────────────────── */
+    .listado { background:var(--bg); }
+    .listado-grid { display:grid; grid-template-columns:1fr 1.4fr; gap:40px; align-items:start; margin-top:60px; }
+    .lista-items { display:flex; flex-direction:column; gap:4px; }
+    .lista-item {
+      display:flex; align-items:center; gap:16px;
+      padding:18px 20px; border-radius:10px;
+      border:1px solid transparent;
+      cursor:pointer; transition:all .25s var(--ease);
+      background:var(--card);
+    }
+    .lista-item:hover, .lista-item.active {
+      border-color:rgba(201,168,76,.25);
+      background:rgba(201,168,76,.05);
+    }
+    .lista-item.active .item-dot { background:var(--gold); color:#0a0f0a; }
+    .item-dot {
+      width:32px; height:32px; border-radius:50%;
+      background:var(--green-deep); color:var(--gold);
+      display:flex; align-items:center; justify-content:center;
+      font-size:.75rem; font-weight:600; flex-shrink:0;
+      transition:all .25s;
+    }
+    .item-text h5 { font-size:.9rem; font-weight:500; margin-bottom:2px; }
+    .item-text p { font-size:.75rem; color:var(--muted); }
+    .item-arrow { margin-left:auto; color:var(--muted); font-size:.9rem; transition:color .25s; }
+    .lista-item:hover .item-arrow { color:var(--gold); }
+    .mapa-container {
+      border-radius:var(--radius); overflow:hidden;
+      border:1px solid var(--border);
+      height:440px; position:sticky; top:90px;
+    }
+    .mapa-container iframe, #landingMap { width:100%; height:100%; border:none; }
+    #landingMap { background:#111811; filter:grayscale(.25) contrast(1.05); }
+    .lista-item.closed { opacity:.72; }
+    .item-status { display:inline-flex; margin-top:6px; padding:3px 8px; border-radius:999px; font-size:.68rem; font-weight:700; }
+    .item-status.open { color:#b8ffc3; border:1px solid rgba(126,203,130,.35); background:rgba(126,203,130,.12); }
+    .item-status.closed { color:#ffb3b3; border:1px solid rgba(255,138,138,.35); background:rgba(255,138,138,.1); }
+
+    /* ─── ABOUT ──────────────────────────────────────────── */
+    .about {
+      background: var(--surface);
+      border-top:1px solid var(--border);
+    }
+    .about-grid { display:grid; grid-template-columns:1fr 1fr; gap:80px; align-items:center; margin-top:0; }
+    .about-visual {
+      position:relative; border-radius:var(--radius); overflow:hidden; height:480px;
+    }
+    .about-visual img { width:100%; height:100%; object-fit:cover; }
+    .about-visual::after {
+      content:''; position:absolute; inset:0;
+      background:linear-gradient(135deg,rgba(46,107,53,.4),transparent);
+    }
+    .about-badge {
+      position:absolute; bottom:28px; left:28px; z-index:2;
+      background:rgba(10,15,10,.85);
+      backdrop-filter:blur(12px);
+      border:1px solid var(--border);
+      border-radius:12px; padding:16px 20px;
+    }
+    .about-badge-n { font-family:var(--font-disp); font-size:2rem; font-weight:700; color:var(--gold); }
+    .about-badge-l { font-size:.72rem; color:var(--muted); letter-spacing:.06em; }
+    .about-content {}
+    .about-cards-row { display:flex; flex-direction:column; gap:16px; margin-top:36px; }
+    .about-card {
+      display:flex; gap:16px; align-items:flex-start;
+      padding:20px; border-radius:12px;
+      background:var(--card); border:1px solid var(--border);
+      transition:border-color .3s var(--ease);
+    }
+    .about-card:hover { border-color:rgba(201,168,76,.25); }
+    .about-icon {
+      width:40px; height:40px; border-radius:10px;
+      background:var(--green-deep); display:flex;
+      align-items:center; justify-content:center;
+      font-size:1.1rem; flex-shrink:0;
+    }
+    .about-card h4 { font-size:.9rem; font-weight:500; margin-bottom:4px; }
+    .about-card p { font-size:.8rem; color:var(--muted); line-height:1.6; }
+
+    /* ─── CONTACTO ───────────────────────────────────────── */
+    .contacto { background:var(--bg); border-top:1px solid var(--border); }
+    .contact-grid {
+      display:grid; grid-template-columns:repeat(4,1fr); gap:16px;
+      margin-top:60px;
+    }
+    .contact-card {
+      padding:28px 24px; background:var(--card);
+      border:1px solid var(--border); border-radius:var(--radius);
+      transition:all .3s var(--ease); cursor:default;
+    }
+    .contact-card:hover {
+      border-color:rgba(201,168,76,.3);
+      transform:translateY(-4px);
+      background:rgba(201,168,76,.04);
+    }
+    .contact-icon {
+      width:44px; height:44px; border-radius:12px;
+      background:var(--green-deep);
+      display:flex; align-items:center; justify-content:center;
+      font-size:1.2rem; margin-bottom:16px;
+    }
+    .contact-card h4 { font-size:.78rem; color:var(--muted); letter-spacing:.08em; text-transform:uppercase; margin-bottom:6px; }
+    .contact-card p { font-size:.9rem; color:var(--white); font-weight:400; }
+
+    /* ─── FOOTER ─────────────────────────────────────────── */
+    footer {
+      background: var(--surface);
+      border-top:1px solid var(--border);
+      padding: 64px 48px 40px;
+    }
+    .footer-grid {
+      display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr 1fr;
+      gap:48px; margin-bottom:56px;
+    }
+    .footer-brand-logo {
+      font-family:var(--font-disp);
+      font-size:1.4rem; font-weight:600; margin-bottom:12px;
+      display:flex; align-items:center; gap:8px;
+    }
+    .footer-brand p { font-size:.82rem; color:var(--muted); line-height:1.7; max-width:240px; margin-bottom:20px; }
+    .footer-socials { display:flex; gap:10px; }
+    .social-link {
+      width:34px; height:34px; border-radius:8px;
+      border:1px solid var(--border);
+      display:flex; align-items:center; justify-content:center;
+      font-size:.85rem; color:var(--muted); text-decoration:none;
+      transition:all .25s var(--ease);
+    }
+    .social-link:hover { border-color:var(--gold); color:var(--gold); }
+    .footer-col h5 { font-size:.75rem; color:var(--muted); letter-spacing:.1em; text-transform:uppercase; margin-bottom:16px; }
+    .footer-col a {
+      display:block; color:rgba(240,244,240,.6); font-size:.83rem;
+      text-decoration:none; margin-bottom:10px;
+      transition:color .25s var(--ease);
+    }
+    .footer-col a:hover { color:var(--gold); }
+    .footer-bottom {
+      display:flex; justify-content:space-between; align-items:center;
+      padding-top:28px; border-top:1px solid var(--border);
+    }
+    .footer-copy { font-size:.75rem; color:var(--muted); }
+    .footer-bottom-links { display:flex; gap:20px; }
+    .footer-bottom-links a { font-size:.75rem; color:var(--muted); text-decoration:none; }
+    .footer-bottom-links a:hover { color:var(--white); }
+
+    /* ─── ANIMATIONS ─────────────────────────────────────── */
+    .fade-up {
+      opacity:0; transform:translateY(30px);
+      animation:fadeUp .8s var(--ease) forwards;
+    }
+    @keyframes fadeUp { to{opacity:1;transform:translateY(0)} }
+    .delay-1{animation-delay:.15s}
+    .delay-2{animation-delay:.3s}
+    .delay-3{animation-delay:.45s}
+    .delay-4{animation-delay:.6s}
+    .delay-5{animation-delay:.75s}
+
+    /* ─── RESPONSIVE ─────────────────────────────────────── */
+    @media(max-width:900px){
+      section{padding:70px 24px}
+      .navbar{padding:0 24px}
+      .featured-grid,.listado-grid,.about-grid{grid-template-columns:1fr}
+      .featured-side{grid-template-rows:auto; grid-template-columns:1fr 1fr; display:grid}
+      .contact-grid{grid-template-columns:1fr 1fr}
+      .footer-grid{grid-template-columns:1fr 1fr}
+      .hero-stats{gap:28px}
+    }
+  </style>
+  <link rel="stylesheet" href="/css/system-responsive.css">
+  <script src="/js/system-form-helpers.js" defer></script>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="logo">
+    <div class="logo-dot"></div>
+    Parques La Paz
+  </div>
+  <ul class="nav-links">
+    <li><a href="#hero">Inicio</a></li>
+    <li><a href="#parques">Parques</a></li>
+    <li><a href="#listado">Listado</a></li>
+    <li><a href="#about">Nosotros</a></li>
+    <li><a href="#contacto">Contacto</a></li>
+  </ul>
+ <div class="nav-actions">
+
+  <a href="/login" class="btn-login">
+    Iniciar sesión
+  </a>
+
+  <a href="/register" class="btn-register">
+    Registrarse
+  </a>
+
+</div>
+</nav>
+
+<!-- HERO -->
+<section id="hero" class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-content">
+    <div class="hero-badge fade-up">Plataforma activa · La Paz, Bolivia</div>
+    <h1 class="fade-up delay-1">Parques que <em>inspiran</em><br>ciudades vivas</h1>
+    <p class="fade-up delay-2">Monitoreo y gestión de espacios verdes urbanos en tiempo real. Conectando ciudadanos con su entorno natural.</p>
+    <div class="hero-ctas fade-up delay-3">
+      <a href="#parques" class="cta-primary">Explorar parques</a>
+      <a href="#about" class="cta-secondary">Conocer más</a>
+    </div>
+  </div>
+  <div class="hero-stats">
+    <div class="stat">
+      <div class="stat-n">24+</div>
+      <div class="stat-l">Parques</div>
+    </div>
+    <div class="stat">
+      <div class="stat-n">5</div>
+      <div class="stat-l">Distritos</div>
+    </div>
+    <div class="stat">
+      <div class="stat-n">98%</div>
+      <div class="stat-l">Disponibilidad</div>
+    </div>
+  </div>
+</section>
+
+<!-- PARQUES -->
+<section id="parques" class="parques">
+  <div class="parques-header">
+    <div class="parques-header-left">
+      <div class="section-label">Espacios verdes</div>
+      <h2 class="section-title">Descubre los mejores<br>parques de la ciudad</h2>
+    </div>
+    <a href="#listado" class="view-all">Ver todos los parques →</a>
+  </div>
+
+  <div class="featured-grid">
+    <div class="featured-main">
+      <img src="https://laoctavabo.com/wp-content/uploads/2024/05/Captura-de-pantalla-2024-05-30-123443.png" alt="Parque Pura Pura">
+      <div class="featured-main-overlay"></div>
+      <div class="featured-main-info">
+        <div class="park-tag">Destacado</div>
+        <h3>Parque Pura Pura</h3>
+        <p>El corazón verde de La Paz. Amplias áreas de recreación, senderos naturales y vistas panorámicas de la ciudad.</p>
+      </div>
+    </div>
+    <div class="featured-side">
+      <div class="side-card">
+        <img src="https://laoctavabo.com/wp-content/uploads/2024/02/WhatsApp-Image-2024-02-09-at-17.14.42.jpeg" alt="Parque Urbano">
+        <div class="side-card-overlay"></div>
+        <div class="side-card-info">
+          <h4>Parque Urbano Central</h4>
+          <p>Zona moderna con instalaciones deportivas</p>
+        </div>
+      </div>
+      <div class="side-card">
+        <img src="https://www.urgente.bo/sites/default/files/parque.gimnasio_0.jpg" alt="Parque Recreativo">
+        <div class="side-card-overlay"></div>
+        <div class="side-card-info">
+          <h4>Parque Recreativo Sur</h4>
+          <p>Actividades para toda la familia</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="scroll-section">
+    <div class="scroll-header">
+      <span class="scroll-title">Más parques disponibles</span>
+      <div class="scroll-btns">
+        <button class="scroll-btn" id="prevBtn">‹</button>
+        <button class="scroll-btn" id="nextBtn">›</button>
+      </div>
+    </div>
+    <div class="cards-track" id="cardsTrack">
+      <div class="mini-card">
+        <img src="https://i.pinimg.com/custom_covers/200x150/719168702935797055_1634846563.jpg" alt="">
+        <div class="mini-card-body">
+          <h5>Parque Infantil Norte</h5>
+          <p>Juegos y área de recreación infantil segura.</p>
+        </div>
+      </div>
+      <div class="mini-card">
+        <img src="https://www.urgente.bo/sites/default/files/parque.gimnasio_0.jpg" alt="">
+        <div class="mini-card-body">
+          <h5>Parque Deportivo Este</h5>
+          <p>Canchas, pistas y zonas de entrenamiento.</p>
+        </div>
+      </div>
+      <div class="mini-card">
+        <img src="https://laoctavabo.com/wp-content/uploads/2024/02/WhatsApp-Image-2024-02-09-at-17.14.42.jpeg" alt="">
+        <div class="mini-card-body">
+          <h5>Parque Ecológico Oeste</h5>
+          <p>Reserva natural con flora y fauna local.</p>
+        </div>
+      </div>
+      <div class="mini-card">
+        <img src="https://laoctavabo.com/wp-content/uploads/2024/05/Captura-de-pantalla-2024-05-30-123443.png" alt="">
+        <div class="mini-card-body">
+          <h5>Parque Mirador Alto</h5>
+          <p>Vistas panorámicas y senderos de montaña.</p>
+        </div>
+      </div>
+      <div class="mini-card">
+        <img src="https://i.pinimg.com/custom_covers/200x150/719168702935797055_1634846563.jpg" alt="">
+        <div class="mini-card-body">
+          <h5>Parque Cultural Centro</h5>
+          <p>Arte urbano, eventos y espacios culturales.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LISTADO -->
+<section id="listado" class="listado">
+  <div class="section-label">Directorio</div>
+  <h2 class="section-title">Todos los parques<br>disponibles</h2>
+  <p class="section-sub">Encuentra información detallada sobre cada espacio verde de la ciudad.</p>
+
+  <div class="listado-grid">
+    <div class="lista-items">
+      <div class="lista-item active" onclick="setActive(this)">
+        <div class="item-dot">A</div>
+        <div class="item-text">
+          <h5>Parque Urbano Central</h5>
+          <p>Sopocachi · Abierto 06:00–20:00</p>
+        </div>
+        <span class="item-arrow">→</span>
+      </div>
+      <div class="lista-item" onclick="setActive(this)">
+        <div class="item-dot">B</div>
+        <div class="item-text">
+          <h5>Parque Infantil Norte</h5>
+          <p>Miraflores · Abierto 08:00–18:00</p>
+        </div>
+        <span class="item-arrow">→</span>
+      </div>
+      <div class="lista-item" onclick="setActive(this)">
+        <div class="item-dot">C</div>
+        <div class="item-text">
+          <h5>Parque Recreativo Sur</h5>
+          <p>San Pedro · Abierto 06:00–21:00</p>
+        </div>
+        <span class="item-arrow">→</span>
+      </div>
+      <div class="lista-item" onclick="setActive(this)">
+        <div class="item-dot">D</div>
+        <div class="item-text">
+          <h5>Parque Deportivo Este</h5>
+          <p>Villa Fátima · Abierto 07:00–20:00</p>
+        </div>
+        <span class="item-arrow">→</span>
+      </div>
+      <div class="lista-item" onclick="setActive(this)">
+        <div class="item-dot">E</div>
+        <div class="item-text">
+          <h5>Parque Ecológico Oeste</h5>
+          <p>Cotahuma · Abierto 08:00–17:00</p>
+        </div>
+        <span class="item-arrow">→</span>
+      </div>
+    </div>
+
+    <div class="mapa-container">
+      <div id="landingMap" aria-label="Mapa de parques disponibles"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section id="about" class="about">
+  <div class="about-grid">
+    <div class="about-visual">
+      <img src="https://laoctavabo.com/wp-content/uploads/2024/05/Captura-de-pantalla-2024-05-30-123443.png" alt="Parque">
+      <div class="about-badge">
+        <div class="about-badge-n">2024</div>
+        <div class="about-badge-l">Desde La Paz, Bolivia</div>
+      </div>
+    </div>
+    <div class="about-content">
+      <div class="section-label">Sobre nosotros</div>
+      <h2 class="section-title">Una plataforma para<br>ciudades más verdes</h2>
+      <p class="section-sub" style="margin-bottom:0">Somos una plataforma dedicada a monitorear y gestionar parques urbanos, brindando a los ciudadanos información en tiempo real sobre el estado y condiciones de los espacios verdes.</p>
+      <div class="about-cards-row">
+        <div class="about-card">
+          <div class="about-icon">✔</div>
+          <div>
+            <h4>Misión</h4>
+            <p>Mejorar la experiencia de los ciudadanos en los parques urbanos, facilitando el reporte de problemas y promoviendo su cuidado colectivo.</p>
+          </div>
+        </div>
+        <div class="about-card">
+          <div class="about-icon">👁</div>
+          <div>
+            <h4>Visión</h4>
+            <p>Crear ciudades más organizadas, seguras y accesibles a través del uso de tecnología avanzada al servicio del medioambiente.</p>
+          </div>
+        </div>
+        <div class="about-card">
+          <div class="about-icon">🌿</div>
+          <div>
+            <h4>Impacto</h4>
+            <p>Más de 24 parques monitoreados, conectando a miles de ciudadanos con los espacios naturales de La Paz.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACTO -->
+<section id="contacto" class="contacto">
+  <div class="section-label">Contacto</div>
+  <h2 class="section-title">Estamos aquí<br>para ayudarte</h2>
+  <div class="contact-grid">
+    <div class="contact-card">
+      <div class="contact-icon">✉️</div>
+      <h4>Correo electrónico</h4>
+      <p>info@parqueslp.bo</p>
+    </div>
+    <div class="contact-card">
+      <div class="contact-icon">📞</div>
+      <h4>Teléfono</h4>
+      <p>+591 2 123 4567</p>
+    </div>
+    <div class="contact-card">
+      <div class="contact-icon">📍</div>
+      <h4>Ubicación</h4>
+      <p>La Paz, Bolivia</p>
+    </div>
+    <div class="contact-card">
+      <div class="contact-icon">🌐</div>
+      <h4>Redes sociales</h4>
+      <p>Facebook · Instagram · X</p>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <div class="footer-brand-logo">🌳 Parques La Paz</div>
+      <p>Plataforma para monitorear y gestionar parques urbanos en tiempo real en la ciudad de La Paz.</p>
+      <div class="footer-socials">
+        <a href="#" class="social-link">𝕏</a>
+        <a href="#" class="social-link">f</a>
+        <a href="#" class="social-link">ig</a>
+        <a href="#" class="social-link">▶</a>
+      </div>
+    </div>
+    <div class="footer-col">
+      <h5>Secciones</h5>
+      <a href="#hero">Inicio</a>
+      <a href="#parques">Parques</a>
+      <a href="#listado">Listado</a>
+      <a href="#about">Nosotros</a>
+    </div>
+    <div class="footer-col">
+      <h5>Explorar</h5>
+      <a href="#">Parques urbanos</a>
+      <a href="#">Parques infantiles</a>
+      <a href="#">Recreativos</a>
+      <a href="#">Ecológicos</a>
+    </div>
+    <div class="footer-col">
+      <h5>Contacto</h5>
+      <a href="#">Correo</a>
+      <a href="#">Teléfono</a>
+      <a href="#">Ubicación</a>
+    </div>
+    <div class="footer-col">
+      <h5>Ayuda</h5>
+      <a href="#">Privacidad</a>
+      <a href="#">Términos</a>
+      <a href="#">Soporte</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span class="footer-copy">© 2024 Parques La Paz. Todos los derechos reservados.</span>
+    <div class="footer-bottom-links">
+      <a href="#">Privacidad</a>
+      <a href="#">Términos</a>
+      <a href="#">Cookies</a>
+    </div>
+  </div>
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  // Carousel
+  const track = document.getElementById('cardsTrack');
+  document.getElementById('prevBtn').onclick = () => track.scrollBy({left:-260,behavior:'smooth'});
+  document.getElementById('nextBtn').onclick = () => track.scrollBy({left:260,behavior:'smooth'});
+  const parkImages = [
+    "https://laoctavabo.com/wp-content/uploads/2024/05/Captura-de-pantalla-2024-05-30-123443.png",
+    "https://laoctavabo.com/wp-content/uploads/2024/02/WhatsApp-Image-2024-02-09-at-17.14.42.jpeg",
+    "https://www.urgente.bo/sites/default/files/parque.gimnasio_0.jpg",
+    "https://i.pinimg.com/custom_covers/200x150/719168702935797055_1634846563.jpg"
+  ];
+  let landingMap = null;
+  const landingMarkers = new Map();
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function parkHours(park) {
+    const status = Number(park.esta_abierto) ? "Abierto" : "Cerrado";
+    return `${status} · Horario 06:00-20:00`;
+  }
+
+  function parkHours(park) {
+    const status = Number(park.abierto_ahora ?? park.esta_abierto) ? "Abierto" : "Cerrado";
+    return `${status} - Horario ${park.hora_apertura || "06:00"}-${park.hora_cierre || "20:00"}`;
+  }
+
+  function isOpenPark(park) {
+    return Number(park.abierto_ahora ?? park.esta_abierto) === 1;
+  }
+
+  function initLandingMap(parks) {
+    const validParks = parks.filter(p => Number.isFinite(Number(p.latitud)) && Number.isFinite(Number(p.longitud)));
+    if (!validParks.length || typeof L === "undefined") return;
+
+    if (landingMap) landingMap.remove();
+    landingMarkers.clear();
+    landingMap = L.map("landingMap", {
+      scrollWheelZoom: false,
+      zoomAnimation: true,
+      fadeAnimation: true,
+      markerZoomAnimation: true,
+      easeLinearity: 0.25
+    }).setView([Number(validParks[0].latitud), Number(validParks[0].longitud)], 13);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "OpenStreetMap",
+      maxZoom: 19
+    }).addTo(landingMap);
+
+    validParks.forEach((park) => {
+      const color = isOpenPark(park) ? "#4caf50" : "#e35f5f";
+      const icon = L.divIcon({
+        className: "",
+        html: `<span style="display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:${color};border:3px solid #fff;box-shadow:0 8px 18px rgba(0,0,0,.35);"></span>`,
+        iconSize: [30, 30],
+        iconAnchor: [15, 15]
+      });
+      const marker = L.marker([Number(park.latitud), Number(park.longitud)], { icon }).addTo(landingMap);
+      marker.bindPopup(`<strong>${escapeHtml(park.nombre)}</strong><br>${escapeHtml(park.nombre_zona || "Sin zona")}<br>${escapeHtml(parkHours(park))}`);
+      landingMarkers.set(Number(park.id_parque), marker);
+    });
+
+    landingMap.fitBounds(L.featureGroup(Array.from(landingMarkers.values())).getBounds().pad(.18), {
+      animate: true,
+      duration: 0.95,
+      easeLinearity: 0.25,
+      padding: [24, 24]
+    });
+  }
+
+  function focusLandingPark(id) {
+    const marker = landingMarkers.get(Number(id));
+    if (!marker || !landingMap) return;
+    landingMap.flyTo(marker.getLatLng(), 15, { animate: true, duration: 1.1, easeLinearity: 0.25 });
+    window.setTimeout(() => marker.openPopup(), 420);
+  }
+
+  async function cargarParquesLanding() {
+    try {
+      const res = await fetch("/api/parques/mapa");
+      const json = await res.json();
+
+      if (!res.ok || !json.success || !Array.isArray(json.data)) {
+        throw new Error("No se pudieron cargar los parques");
+      }
+
+      const parks = json.data.filter(p => p && p.nombre);
+      if (!parks.length) return;
+
+      document.querySelector(".hero-stats .stat:first-child .stat-n").textContent = parks.length;
+
+      track.innerHTML = parks.map((park, index) => `
+        <div class="mini-card">
+          <img src="${parkImages[index % parkImages.length]}" alt="${escapeHtml(park.nombre)}">
+          <div class="mini-card-body">
+            <h5>${escapeHtml(park.nombre)}</h5>
+            <p>${escapeHtml(park.nombre_zona || "Sin zona")} · ${escapeHtml(parkHours(park))}</p>
+          </div>
+        </div>
+      `).join("");
+
+      const lista = document.querySelector(".lista-items");
+      lista.innerHTML = parks.map((park, index) => `
+        <div class="lista-item ${index === 0 ? "active" : ""} ${isOpenPark(park) ? "" : "closed"}" onclick="setActive(this, ${Number(park.id_parque)})">
+          <div class="item-dot">${String.fromCharCode(65 + (index % 26))}</div>
+          <div class="item-text">
+            <h5>${escapeHtml(park.nombre)}</h5>
+            <p>${escapeHtml(park.nombre_zona || "Sin zona")} · ${escapeHtml(parkHours(park))}</p>
+          </div>
+          <span class="item-arrow">→</span>
+        </div>
+      `).join("");
+
+      initLandingMap(parks);
+      const first = parks.find(p => Number.isFinite(Number(p.latitud)) && Number.isFinite(Number(p.longitud)));
+      if (first) {
+        const iframe = document.querySelector(".mapa-container iframe");
+        if (iframe) iframe.src = `https://maps.google.com/maps?q=${encodeURIComponent(first.latitud + "," + first.longitud)}&t=&z=14&output=embed`;
+        focusLandingPark(first.id_parque);
+      }
+    } catch (error) {
+      console.warn(error);
+    }
+  }
+
+  // Active list item
+  function setActive(el, parkId){
+    document.querySelectorAll('.lista-item').forEach(i=>i.classList.remove('active'));
+    el.classList.add('active');
+    if (parkId) focusLandingPark(parkId);
+  }
+
+  // Fade-in on scroll
+  const observer = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        e.target.style.opacity='1';
+        e.target.style.transform='translateY(0)';
+      }
+    });
+  },{threshold:0.1});
+
+  document.querySelectorAll('.mini-card,.contact-card,.about-card,.lista-item').forEach(el=>{
+    el.style.opacity='0';
+    el.style.transform='translateY(20px)';
+    el.style.transition='opacity .6s ease, transform .6s ease';
+    observer.observe(el);
+  });
+
+  cargarParquesLanding();
+</script>
+<!-- CHATBOT -->
+<link rel="stylesheet" href="/assets/css/chatbot.css">
+<script type="module" src="/assets/js/chatbot-widget.js"></script>
+</body>
+</html>

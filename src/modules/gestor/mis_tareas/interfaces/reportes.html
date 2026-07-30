@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reporte de Mis Tareas | Gestor</title>
+  
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap');
+    
+    :root {
+      --bg-principal: #0d130f;      
+      --bg-tarjetas: #161e18;       
+      --bg-hover: #1e2820;          
+      --texto-titulo: #e1ebd9;      
+      --texto-secundario: #82967e;  
+      --boton-amarillo: #efc45e;    
+      --acento-principal: #a8e09e;
+      --badge-media: #cfa856;       
+      --badge-resuelto: #61b369;    
+      --badge-critico: #d96c6c;     
+      --badge-pendiente: #7ba2d4;   
+      --borde-suave: #243326;       
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Raleway', Arial, sans-serif; background: transparent; color: var(--texto-titulo); padding: 20px; }
+    
+    .shell { display: flex; flex-direction: column; gap: 20px; }
+    
+    .hero { display: flex; justify-content: space-between; gap: 16px; align-items: flex-end; padding: 25px; border: 1px solid var(--borde-suave); border-radius: 12px; background: var(--bg-tarjetas); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+    .eyebrow { color: var(--boton-amarillo); font-size: 0.75rem; font-weight: 900; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 8px;}
+    h1 { font-size: 1.8rem; color: var(--texto-titulo); font-weight: 800; }
+    .hero p { margin-top: 8px; color: var(--texto-secundario); font-size: 0.9rem; }
+    
+    .toolbar { display: flex; gap: 12px; flex-wrap: wrap; }
+    .toolbar select, .toolbar input { min-height: 42px; border: 1px solid var(--borde-suave); border-radius: 8px; background: var(--bg-principal); color: var(--texto-titulo); padding: 0 15px; outline: none; font-family: 'Raleway', sans-serif; font-weight: 600; color-scheme: dark; transition: 0.3s; }
+    .toolbar select:focus, .toolbar input:focus { border-color: var(--boton-amarillo); box-shadow: 0 0 0 2px rgba(239, 196, 94, 0.2); }
+    
+    .btn-pdf { min-height: 42px; border: 0; border-radius: 8px; background: #d96c6c; color: #fff; font-weight: 800; padding: 0 20px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 8px; text-transform: uppercase; letter-spacing: 1px; font-size: 0.85rem; box-shadow: 0 4px 15px rgba(217, 108, 108, 0.3); }
+    .btn-pdf:hover { background: #e87b7b; transform: translateY(-2px); }
+    
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+    .stat { padding: 20px; border: 1px solid var(--borde-suave); border-radius: 12px; background: var(--bg-tarjetas); position: relative; overflow: hidden; }
+    .stat::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
+    .stat-total::before { background: var(--boton-amarillo); }
+    .stat-pend::before { background: var(--badge-critico); }
+    .stat-rev::before { background: var(--badge-media); }
+    .stat-done::before { background: var(--badge-resuelto); }
+    .stat span { color: var(--texto-secundario); font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;}
+    .stat strong { display: block; margin-top: 10px; font-size: 2.2rem; color: var(--texto-titulo); font-weight: 900; }
+    
+    .table-container { background: var(--bg-tarjetas); border: 1px solid var(--borde-suave); border-radius: 12px; overflow-x: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th { background: rgba(0,0,0,0.4); padding: 18px 15px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--texto-secundario); font-weight: 800; border-bottom: 1px solid var(--borde-suave); }
+    td { padding: 15px; border-bottom: 1px solid var(--borde-suave); font-size: 0.9rem; color: var(--texto-titulo); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover { background: var(--bg-hover); }
+
+    .desc-cell { max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mono { font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; color: var(--acento-principal); }
+
+    .badge { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;}
+    .bg-critico { background: rgba(217, 108, 108, 0.15); border: 1px solid var(--badge-critico); color: var(--badge-critico); }
+    .bg-media { background: rgba(207, 168, 86, 0.15); border: 1px solid var(--badge-media); color: var(--boton-amarillo); }
+    .bg-resuelto { background: rgba(97, 179, 105, 0.15); border: 1px solid var(--badge-resuelto); color: var(--badge-resuelto); }
+    .bg-pendiente { background: rgba(123, 162, 212, 0.15); border: 1px solid var(--badge-pendiente); color: var(--badge-pendiente); }
+
+    .empty { padding: 40px; text-align: center; color: var(--texto-secundario); font-weight: 600; }
+
+    @media(max-width:780px){ .hero { flex-direction: column; align-items: flex-start; } .toolbar { width: 100%; } .toolbar input, .toolbar select, .btn-pdf { flex-grow: 1; } }
+  </style>
+  <link rel="stylesheet" href="/css/system-responsive.css">
+  <script src="/js/system-form-helpers.js" defer></script>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div>
+        <div class="eyebrow">Módulo de Reportes</div>
+        <h1>Historial de Tareas Asignadas</h1>
+        <p>Visualiza y exporta en PDF el estado de todas tus tareas de mantenimiento.</p>
+      </div>
+      <div class="toolbar">
+        <input id="q" type="search" placeholder="Buscar parque o problema..." oninput="render()">
+        <select id="estado" onchange="render()">
+          <option value="">Todos los Estados</option>
+          <option value="1">Pendientes</option>
+          <option value="2">En revisión</option>
+          <option value="3">Resueltos</option>
+          <option value="4">Rechazados</option>
+        </select>
+        <button class="btn-pdf" type="button" onclick="exportarPDF()">📄 Descargar PDF</button>
+      </div>
+    </section>
+    
+    <section class="stats">
+      <article class="stat stat-total"><span>Total asignadas</span><strong id="kTotal">0</strong></article>
+      <article class="stat stat-pend"><span>Pendientes</span><strong id="kPend">0</strong></article>
+      <article class="stat stat-rev"><span>En revisión</span><strong id="kRev">0</strong></article>
+      <article class="stat stat-done"><span>Resueltas</span><strong id="kDone">0</strong></article>
+    </section>
+    
+    <section class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Ubicación</th>
+            <th>Descripción del Problema</th>
+            <th>Prioridad</th>
+            <th>Estado</th>
+            <th>Fecha Reporte</th>
+          </tr>
+        </thead>
+        <tbody id="tablaTareas"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script>
+    const token = localStorage.getItem("token") || ""; 
+    let tareas = []; 
+    let filtradasPDF = []; 
+    
+    const obtenerHeaders = () => ({ "Authorization": `Bearer ${token}`, "Content-Type": "application/json" });
+    const esc = v => String(v ?? "").replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
+    
+    const getClassEstado = (id) => {
+        if(id == 1) return "bg-critico"; 
+        if(id == 2) return "bg-media";   
+        if(id == 3) return "bg-resuelto"; 
+        return "bg-pendiente";
+    };
+
+    const getClassPrioridad = (id) => {
+        if(id == 1) return "bg-critico"; 
+        if(id == 2) return "bg-media";   
+        return "bg-pendiente";
+    };
+
+    async function cargarTareas() {
+      try {
+        // RUTA CORREGIDA: Apuntamos a tu API original
+        const res = await fetch("/api/reportes/gestor/mis-tareas", { headers: obtenerHeaders() });
+        const json = await res.json();
+        
+        if (!res.ok || !json.ok) { 
+            document.getElementById("tablaTareas").innerHTML = `<tr><td colspan="6" class="empty">Error al cargar datos.</td></tr>`; 
+            return; 
+        }
+        
+        tareas = json.data || []; 
+        render();
+      } catch(e) {
+        console.error(e);
+        document.getElementById("tablaTareas").innerHTML = `<tr><td colspan="6" class="empty">Error de conexión con el servidor.</td></tr>`;
+      }
+    }
+    
+    function render() {
+      const q = document.getElementById("q").value.trim().toLowerCase();
+      const estado = document.getElementById("estado").value;
+      
+      const filtered = tareas.filter(t => 
+        (!q || `${t.parque} ${t.cancha || ''} ${t.descripcion}`.toLowerCase().includes(q)) && 
+        (!estado || String(t.id_estado_reporte) === estado)
+      );
+
+      filtradasPDF = filtered; 
+      
+      document.getElementById("kTotal").textContent = filtered.length;
+      document.getElementById("kPend").textContent = filtered.filter(t => Number(t.id_estado_reporte) === 1).length;
+      document.getElementById("kRev").textContent = filtered.filter(t => Number(t.id_estado_reporte) === 2).length;
+      document.getElementById("kDone").textContent = filtered.filter(t => Number(t.id_estado_reporte) === 3).length;
+      
+      const tbody = document.getElementById("tablaTareas");
+      
+      if(filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="empty">No se encontraron tareas con estos filtros.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(t => {
+        const fecha = new Date(t.fecha_creacion).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+        const ubicacion = t.cancha ? `🌳 ${t.parque}<br><span class="mono">🏟️ ${t.cancha}</span>` : `🌳 ${t.parque}`;
+        
+        return `
+        <tr>
+          <td class="mono">#${t.id_reporte}</td>
+          <td>${ubicacion}</td>
+          <td class="desc-cell" title="${esc(t.descripcion)}">${esc(t.descripcion)}</td>
+          <td><span class="badge ${getClassPrioridad(t.id_prioridad)}">${esc(t.prioridad)}</span></td>
+          <td><span class="badge ${getClassEstado(t.id_estado_reporte)}">${esc(t.estado)}</span></td>
+          <td class="mono">${fecha}</td>
+        </tr>`;
+      }).join("");
+    }
+    
+    function exportarPDF() {
+      if(filtradasPDF.length === 0) {
+        Swal.fire({ title: 'Sin datos', text: 'No hay tareas para exportar.', icon: 'info', background: '#161e18', color: '#e1ebd9' });
+        return;
+      }
+
+      Swal.fire({
+        title: 'Generando Documento...', text: 'Preparando tu reporte en PDF.', background: '#161e18', color: '#e1ebd9',
+        allowOutsideClick: false, didOpen: () => { Swal.showLoading() }
+      });
+
+      setTimeout(() => {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('landscape'); 
+        
+        doc.setFillColor(13, 19, 15);
+        doc.rect(0, 0, 300, 30, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(18);
+        doc.text("Sistema de Parques - Reporte de Tareas Asignadas", 14, 20);
+        
+        doc.setFontSize(10);
+        doc.setTextColor(200, 200, 200);
+        doc.text(`Generado el: ${new Date().toLocaleString()}`, 14, 38);
+
+        const dataBody = filtradasPDF.map(t => [ `#${t.id_reporte}`, t.parque, t.cancha || 'General', t.prioridad, t.estado, new Date(t.fecha_creacion).toLocaleDateString('es-ES') ]);
+
+        doc.autoTable({
+            startY: 45,
+            head: [['ID', 'Parque', 'Cancha/Área', 'Prioridad', 'Estado', 'Fecha Reporte']],
+            body: dataBody,
+            theme: 'grid',
+            headStyles: { fillColor: [47, 125, 50], textColor: 255, fontStyle: 'bold' },
+            alternateRowStyles: { fillColor: [240, 245, 240] },
+            styles: { fontSize: 10, cellPadding: 5 }
+        });
+
+        doc.save("Reporte_Mis_Tareas.pdf");
+        Swal.close();
+      }, 500); 
+    }
+    
+    window.onload = cargarTareas;
+  </script>
+</body>
+</html>

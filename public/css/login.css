@@ -1,0 +1,351 @@
+:root {
+  --bg: #07100d;
+  --panel: rgba(12, 22, 18, .86);
+  --panel-solid: #101b16;
+  --line: rgba(238, 232, 214, .16);
+  --text: #f5f2ea;
+  --muted: #b8c4b8;
+  --soft: #d7decf;
+  --green: #4f9f67;
+  --green-dark: #1f5f37;
+  --gold: #d5b35f;
+  --danger: #ff8a8a;
+  --ok: #91e6a5;
+  --font-display: "Cormorant Garamond", serif;
+  --font-body: "DM Sans", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  font-family: var(--font-body);
+  color: var(--text);
+  background:
+    linear-gradient(120deg, rgba(7, 16, 13, .98), rgba(7, 16, 13, .72)),
+    url("https://facts.net/wp-content/uploads/2023/07/34-facts-about-la-paz-1688475396.jpg") center/cover fixed;
+}
+
+a {
+  color: inherit;
+}
+
+.auth-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  padding: 16px clamp(18px, 4vw, 52px);
+  background: rgba(7, 16, 13, .78);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(18px);
+}
+
+.brand,
+.auth-nav-links,
+.auth-nav-links a,
+.nav-cta {
+  display: inline-flex;
+  align-items: center;
+}
+
+.brand {
+  gap: 10px;
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.brand-mark {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--gold);
+  box-shadow: 0 0 0 6px rgba(213, 179, 95, .13);
+}
+
+.auth-nav-links {
+  gap: 24px;
+  color: var(--muted);
+  font-size: .92rem;
+}
+
+.auth-nav-links a,
+.nav-cta {
+  text-decoration: none;
+}
+
+.auth-nav-links a:hover {
+  color: var(--text);
+}
+
+.nav-cta {
+  min-height: 40px;
+  justify-content: center;
+  padding: 0 16px;
+  border: 1px solid rgba(213, 179, 95, .52);
+  border-radius: 8px;
+  color: var(--gold);
+  font-weight: 700;
+}
+
+.auth-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(360px, 470px);
+  gap: clamp(28px, 6vw, 84px);
+  align-items: center;
+  padding: 112px clamp(18px, 5vw, 72px) 40px;
+}
+
+.auth-intro {
+  max-width: 700px;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border: 1px solid rgba(213, 179, 95, .42);
+  border-radius: 999px;
+  color: var(--gold);
+  font-size: .82rem;
+  font-weight: 700;
+}
+
+.auth-intro h1 {
+  margin-top: 24px;
+  max-width: 660px;
+  font-family: var(--font-display);
+  font-size: clamp(2.6rem, 6vw, 5.4rem);
+  line-height: .98;
+}
+
+.auth-intro p {
+  margin-top: 18px;
+  max-width: 590px;
+  color: var(--soft);
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+.role-panel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 34px;
+}
+
+.role-panel article {
+  min-height: 118px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(245, 242, 234, .07);
+  backdrop-filter: blur(14px);
+}
+
+.role-panel strong,
+.role-panel span {
+  display: block;
+}
+
+.role-panel strong {
+  color: var(--gold);
+  font-size: .98rem;
+}
+
+.role-panel span {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: .88rem;
+  line-height: 1.45;
+}
+
+.auth-card {
+  width: 100%;
+  padding: clamp(24px, 4vw, 36px);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .38);
+  backdrop-filter: blur(22px);
+}
+
+.auth-card-head span {
+  color: var(--gold);
+  font-size: .82rem;
+  font-weight: 700;
+}
+
+.auth-card-head h2 {
+  margin-top: 6px;
+  font-family: var(--font-display);
+  font-size: 2.35rem;
+}
+
+.auth-card-head p {
+  margin-top: 8px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.auth-form {
+  display: grid;
+  gap: 16px;
+  margin-top: 28px;
+}
+
+.form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.form-full {
+  grid-column: 1 / -1;
+}
+
+.auth-form label {
+  display: grid;
+  gap: 7px;
+  color: var(--soft);
+  font-size: .88rem;
+  font-weight: 700;
+}
+
+.auth-form input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid rgba(245, 242, 234, .18);
+  border-radius: 8px;
+  outline: none;
+  background: rgba(0, 0, 0, .22);
+  color: var(--text);
+  font: inherit;
+}
+
+.auth-form input::placeholder {
+  color: rgba(216, 222, 207, .55);
+}
+
+.auth-form input:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(213, 179, 95, .13);
+}
+
+.btn-submit {
+  min-height: 50px;
+  border: 0;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--gold), #f0d582);
+  color: #142016;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+
+.btn-submit:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(213, 179, 95, .22);
+}
+
+.btn-submit:disabled {
+  cursor: not-allowed;
+  opacity: .68;
+  transform: none;
+  box-shadow: none;
+}
+
+.form-message {
+  min-height: 22px;
+  margin-top: 16px;
+  color: var(--danger);
+  font-size: .9rem;
+  line-height: 1.4;
+}
+
+.form-message.ok {
+  color: var(--ok);
+}
+
+.auth-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+  color: var(--muted);
+  font-size: .92rem;
+}
+
+.auth-switch a {
+  color: var(--gold);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.auth-switch a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 960px) {
+  .auth-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-intro {
+    max-width: none;
+  }
+}
+
+@media (max-width: 720px) {
+  body {
+    background-attachment: scroll;
+  }
+
+  .auth-nav {
+    position: static;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .auth-nav-links {
+    width: 100%;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .nav-cta {
+    width: 100%;
+  }
+
+  .auth-shell {
+    min-height: auto;
+    padding-top: 34px;
+  }
+
+  .role-panel,
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-full {
+    grid-column: auto;
+  }
+
+  .auth-intro h1 {
+    font-size: clamp(2.4rem, 13vw, 3.8rem);
+  }
+}

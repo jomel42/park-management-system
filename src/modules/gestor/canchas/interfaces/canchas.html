@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mis Canchas Asignadas</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/dark.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://npmcdn.com/flatpickr/dist/l10n/es.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap');
+
+    :root {
+      --bg-principal: #0d130f;      
+      --bg-tarjetas: #161e18;       
+      --texto-titulo: #e1ebd9;      
+      --texto-secundario: #82967e;  
+      --acento-principal: #a8e09e;  
+      --boton-amarillo: #efc45e;    
+      --badge-media: #cfa856;       
+      --badge-resuelto: #61b369;    
+      --badge-critico: #d96c6c;     
+      --badge-pendiente: #7ba2d4;   
+      --borde-suave: #243326; 
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Raleway', sans-serif; color: var(--texto-titulo); padding: 20px; background: transparent; }
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--borde-suave); border-radius: 4px; }
+
+    .header-acciones { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; background: var(--bg-tarjetas); padding: 20px; border-radius: 12px; border: 1px solid var(--borde-suave); }
+    .buscador { padding: 10px 15px; border-radius: 8px; border: 1px solid var(--borde-suave); background: var(--bg-principal); color: var(--texto-titulo); width: 300px; font-family: 'IBM Plex Mono', monospace; outline: none; transition: 0.3s; }
+    .buscador:focus { border-color: var(--boton-amarillo); box-shadow: 0 0 5px rgba(239, 196, 94, 0.2); }
+    
+    .grid-reportes { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+    .card-reporte { background: var(--bg-tarjetas); border: 1px solid var(--borde-suave); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 12px; transition: 0.3s; }
+    .card-reporte:hover { border-color: var(--boton-amarillo); transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+
+    .badges { display: flex; gap: 8px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; font-family: 'IBM Plex Mono', monospace; }
+    .badge { padding: 4px 8px; border-radius: 4px; color: #111; }
+    .prio-1 { background-color: var(--badge-critico); color: white; }
+    .prio-2 { background-color: var(--badge-media); }
+    .prio-3 { background-color: var(--badge-pendiente); color: white;}
+    .est-1 { border: 1px solid var(--badge-critico); color: var(--badge-critico); }
+    .est-2 { border: 1px solid var(--boton-amarillo); color: var(--boton-amarillo); }
+    .est-3 { border: 1px solid var(--badge-resuelto); color: var(--badge-resuelto); }
+
+    .card-title { font-size: 1.1rem; font-weight: 800; color: var(--texto-titulo); }
+    .card-ubicacion { font-size: 0.8rem; color: var(--acento-principal); font-family: 'IBM Plex Mono', monospace; }
+    .card-desc { font-size: 0.85rem; color: var(--texto-secundario); line-height: 1.4; flex-grow: 1; }
+    .card-fecha { font-size: 0.7rem; color: var(--texto-secundario); text-align: right; }
+
+    .btn-gestionar { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--borde-suave); background: transparent; color: var(--texto-titulo); font-family: 'Raleway', sans-serif; font-weight: 700; cursor: pointer; transition: 0.3s; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px; font-size: 0.8rem; }
+    .btn-gestionar:hover { border-color: var(--boton-amarillo); background: rgba(239, 196, 94, 0.1); color: var(--boton-amarillo); }
+
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); display: none; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(5px); }
+    .modal { background: var(--bg-tarjetas); width: 500px; border-radius: 16px; border: 1px solid var(--borde-suave); padding: 30px; box-shadow: 0 15px 40px rgba(0,0,0,0.6); }
+    .modal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; }
+    .modal-pretitle { font-size: 0.65rem; font-weight: 900; color: var(--boton-amarillo); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+    .modal-title { font-size: 1.3rem; font-weight: 800; color: var(--texto-titulo); }
+    .btn-cerrar { background: transparent; border: 1px solid var(--borde-suave); color: var(--texto-secundario); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 700; transition: 0.2s; }
+    .btn-cerrar:hover { background: rgba(255,255,255,0.05); color: var(--texto-titulo); border-color: var(--texto-secundario); }
+    
+    .form-group { margin-bottom: 18px; display: flex; flex-direction: column; gap: 8px; }
+    .form-group label { font-size: 0.75rem; font-weight: 800; color: var(--texto-secundario); text-transform: uppercase; letter-spacing: 0.5px; }
+    .input-modal { width: 100%; padding: 14px; border-radius: 8px; border: 1px solid var(--borde-suave); background: var(--bg-principal); color: var(--texto-titulo); font-family: 'Raleway', sans-serif; font-size: 0.95rem; outline: none; color-scheme: dark; cursor: pointer; transition: 0.3s; }
+    .input-modal:focus { border-color: var(--boton-amarillo); box-shadow: 0 0 0 2px rgba(239, 196, 94, 0.2); }
+    .btn-guardar { width: 100%; background: var(--boton-amarillo); color: #000; border: none; padding: 14px; border-radius: 8px; font-weight: 800; font-size: 1rem; cursor: pointer; margin-top: 15px; transition: 0.2s; text-transform: uppercase; letter-spacing: 1px; }
+    .btn-guardar:hover { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(239, 196, 94, 0.3); }
+
+    .flatpickr-calendar { z-index: 9999 !important; font-family: 'Raleway', sans-serif; border: 1px solid var(--borde-suave); box-shadow: 0 10px 25px rgba(0,0,0,0.5); padding-bottom: 0 !important; }
+    .flatpickr-time { border-top: 1px solid var(--borde-suave) !important; padding: 10px 0 !important; height: auto !important; display: flex !important; }
+    .btn-confirmar-fecha { width: 100%; padding: 12px; background: var(--boton-amarillo); color: #000; border: none; font-weight: 800; font-family: 'Raleway', sans-serif; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; transition: 0.2s; border-radius: 0 0 4px 4px; margin-top: 5px; }
+    .btn-confirmar-fecha:hover { filter: brightness(1.1); }
+  </style>
+  <link rel="stylesheet" href="/css/system-responsive.css">
+  <script src="/js/system-form-helpers.js" defer></script>
+</head>
+<body>
+
+  <div class="header-acciones">
+    <div>
+      <h3 style="color: var(--texto-titulo); margin-bottom: 5px; font-weight: 800;">🏟️ Mis Canchas Asignadas</h3>
+      <p style="font-size: 0.85rem; color: var(--texto-secundario);">Gestión de problemas que me fueron asignados en campos deportivos.</p>
+    </div>
+    <input type="text" class="buscador" id="buscarReporte" list="sugerencias-reportes-canchas" maxlength="80" autocomplete="off" placeholder="Buscar cancha asignada..." onkeyup="filtrarReportes()">
+    <datalist id="sugerencias-reportes-canchas"></datalist>
+  </div>
+
+  <div class="grid-reportes" id="contenedorReportes"></div>
+
+  <div class="modal-overlay" id="modalGestion">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <div class="modal-pretitle">Gestión de Tarea</div>
+          <h3 class="modal-title" id="modalTitulo">Reporte #0 - Cancha</h3>
+        </div>
+        <button class="btn-cerrar" onclick="cerrarModal()">Cerrar</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="modalIdReporte">
+        <div class="form-group">
+          <label>Estado actual del reporte</label>
+          <select id="modalEstado" class="input-modal">
+            <option value="1">Pendiente</option>
+            <option value="2">En revisión / Trabajando</option>
+            <option value="3">Resuelto / Terminado</option>
+            <option value="4">Rechazado</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Tiempo Estimado (Fecha y hora límite)</label>
+          <input type="text" id="modalFechaLimite" class="input-modal" placeholder="Clic aquí para seleccionar fecha y hora...">
+        </div>
+        <div class="form-group">
+          <label>Comentario de Avance</label>
+          <textarea id="modalComentario" rows="3" class="input-modal" placeholder="Describe los avances, materiales usados o estado de la reparación..."></textarea>
+        </div>
+        <button class="btn-guardar" onclick="guardarGestion()">Guardar Avance</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+function obtenerHeaders(){ return { "Authorization": `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" }; }
+
+let reportesGlobales = [];
+let flatpickrInstancia = null; 
+
+function normalizarBusqueda(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function limpiarBusqueda(value) {
+  return String(value || "")
+    .replace(/[<>`{}[\]\\]/g, "")
+    .replace(/\s{2,}/g, " ")
+    .slice(0, 80);
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function actualizarSugerenciasReportes(query = normalizarBusqueda(document.getElementById('buscarReporte')?.value)) {
+  const datalist = document.getElementById('sugerencias-reportes-canchas');
+  if (!datalist) return;
+  const vistos = new Set();
+  const sugerencias = [];
+
+  reportesGlobales.forEach(r => {
+    [r.cancha, r.parque, r.descripcion].filter(Boolean).forEach(value => {
+      const texto = String(value).trim();
+      const key = normalizarBusqueda(texto);
+      if (!texto || vistos.has(key)) return;
+      if (query && !key.startsWith(query) && !key.includes(query)) return;
+      vistos.add(key);
+      sugerencias.push({ texto, starts: !query || key.startsWith(query) });
+    });
+  });
+
+  sugerencias.sort((a, b) => Number(b.starts) - Number(a.starts) || a.texto.localeCompare(b.texto, "es"));
+  datalist.innerHTML = sugerencias.slice(0, 10).map(item => `<option value="${escapeHtml(item.texto)}"></option>`).join("");
+}
+
+async function cargarReportes() {
+  try {
+    // RUTA CORREGIDA: Apuntamos a tu API original
+    const res = await fetch('/api/reportes/gestor/mis-tareas', { headers: obtenerHeaders() });
+    const data = await res.json();
+    if(data.ok) {
+      reportesGlobales = data.data.filter(r => r.cancha != null && r.cancha !== "");
+      actualizarSugerenciasReportes("");
+      renderizarReportes(reportesGlobales);
+    }
+  } catch (error) { console.error(error); }
+}
+
+function renderizarReportes(datos) {
+  const contenedor = document.getElementById('contenedorReportes');
+  contenedor.innerHTML = '';
+  if(datos.length === 0) {
+      contenedor.innerHTML = '<p style="color: var(--texto-secundario); font-weight: 600;">No tienes tareas asignadas en canchas.</p>';
+      return;
+  }
+  datos.forEach(reporte => {
+    const fechaFormat = new Date(reporte.fecha_creacion).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+    const card = document.createElement('div');
+    card.className = 'card-reporte';
+    card.innerHTML = `
+      <div class="badges">
+        <span class="badge prio-${reporte.id_prioridad}">${reporte.prioridad || 'Media'}</span>
+        <span class="badge est-${reporte.id_estado_reporte}" style="background: transparent;">${reporte.estado}</span>
+      </div>
+      <div><div class="card-title">Reporte #${reporte.id_reporte}</div><div class="card-ubicacion">🏟️ ${reporte.cancha} | 🌳 ${reporte.parque}</div></div>
+      <div class="card-desc">"${reporte.descripcion}"</div>
+      <div class="card-fecha">📅 Reportado el: ${fechaFormat}</div>
+      <button class="btn-gestionar" onclick="abrirModal(${reporte.id_reporte})">Gestionar Tarea</button>
+    `;
+    contenedor.appendChild(card);
+  });
+}
+
+function filtrarReportes() {
+  const input = document.getElementById('buscarReporte');
+  const limpio = limpiarBusqueda(input.value);
+  if (input.value !== limpio) input.value = limpio;
+  const texto = normalizarBusqueda(limpio);
+  const resultados = [];
+  reportesGlobales.forEach(r => {
+    const valores = [r.cancha, r.parque, r.descripcion].filter(Boolean).map(normalizarBusqueda);
+    const match = !texto || valores.some(value => value.includes(texto));
+    const starts = texto && valores.some(value => value.startsWith(texto));
+    if (match) resultados.push({ r, score: starts ? 0 : 1 });
+  });
+  const filtradas = texto
+    ? resultados.sort((a, b) => a.score - b.score || String(a.r.cancha || "").localeCompare(String(b.r.cancha || ""), "es")).map(item => item.r)
+    : resultados.map(item => item.r);
+  actualizarSugerenciasReportes(texto);
+  renderizarReportes(filtradas);
+}
+
+function abrirModal(id) {
+  const reporte = reportesGlobales.find(r => r.id_reporte === id);
+  if(!reporte) return;
+  document.getElementById('modalIdReporte').value = reporte.id_reporte;
+  document.getElementById('modalTitulo').textContent = `Reporte #${reporte.id_reporte} - ${reporte.cancha}`;
+  document.getElementById('modalEstado').value = reporte.id_estado_reporte;
+  document.getElementById('modalComentario').value = '';
+  if (flatpickrInstancia) { flatpickrInstancia.destroy(); }
+  let fechaSegura = reporte.fecha_creacion;
+  if(typeof fechaSegura === 'string') { fechaSegura = fechaSegura.replace(' ', 'T'); }
+  const fechaReporte = new Date(fechaSegura);
+  const fechaMinimaSistema = new Date('2026-03-01T00:00:00');
+  const fechaMinima = fechaReporte > fechaMinimaSistema ? fechaReporte : fechaMinimaSistema;
+  flatpickrInstancia = flatpickr("#modalFechaLimite", {
+      enableTime: true, dateFormat: "Y-m-d H:i:S", altInput: true, altFormat: "d M Y - H:i", minDate: fechaMinima, locale: "es", time_24hr: true, disableMobile: true, theme: "dark",
+      onReady: function(selectedDates, dateStr, instance) {
+          const btnContainer = document.createElement("div");
+          btnContainer.style.background = "var(--bg-tarjetas)";
+          btnContainer.style.textAlign = "center";
+          const btn = document.createElement("button");
+          btn.className = "btn-confirmar-fecha";
+          btn.innerHTML = "✔️ Confirmar Fecha y Hora";
+          btn.type = "button";
+          btn.addEventListener("click", function() { instance.close(); });
+          btnContainer.appendChild(btn);
+          instance.calendarContainer.appendChild(btnContainer);
+      }
+  });
+  document.getElementById('modalGestion').style.display = 'flex';
+}
+
+function cerrarModal() { document.getElementById('modalGestion').style.display = 'none'; }
+
+async function guardarGestion() {
+  const idReporte = document.getElementById('modalIdReporte').value;
+  const estado = document.getElementById('modalEstado').value;
+  const fechaLimite = document.getElementById('modalFechaLimite').value;
+  const comentario = document.getElementById('modalComentario').value;
+  if(!estado || comentario.trim().length < 5) {
+    Swal.fire({ title: 'Información Incompleta', text: 'Por favor, selecciona un estado y escribe un comentario de avance.', icon: 'warning', background: '#161e18', color: '#e1ebd9', confirmButtonColor: '#efc45e', confirmButtonText: 'Entendido' });
+    return;
+  }
+  if(fechaLimite && fechaLimite.slice(0, 10) < '2026-03-01') {
+    Swal.fire({ title: 'Fecha no permitida', text: 'No se permiten fechas anteriores al 1 de marzo de 2026.', icon: 'warning', background: '#161e18', color: '#e1ebd9', confirmButtonColor: '#efc45e', confirmButtonText: 'Entendido' });
+    return;
+  }
+  try {
+    const res = await fetch(`/api/gestor/reportes/${idReporte}/gestionar`, { method: 'POST', headers: obtenerHeaders(), body: JSON.stringify({ estado, fecha_limite: fechaLimite, comentario }) });
+    const data = await res.json();
+    if(data.ok) {
+      Swal.fire({ title: '¡Gestión Guardada!', text: 'Los cambios se han actualizado en el sistema.', icon: 'success', background: '#161e18', color: '#e1ebd9', showConfirmButton: false, timer: 2500 });
+      cerrarModal();
+      cargarReportes(); 
+    } else {
+      Swal.fire({ title: 'Error del Sistema', text: data.msg, icon: 'error', background: '#161e18', color: '#e1ebd9', confirmButtonColor: '#efc45e' });
+    }
+  } catch (error) { console.error(error); }
+}
+
+cargarReportes();
+</script>
+</body>
+</html>

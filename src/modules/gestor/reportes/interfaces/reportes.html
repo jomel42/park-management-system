@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mis tareas | Gestor</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700;800&display=swap');
+    :root{--bg:#07100d;--panel:#101d17;--panel2:#15251d;--line:rgba(226,238,221,.12);--text:#f3f7f0;--muted:#9cb29d;--green:#55b978;--gold:#d9b24c;--red:#ef6f6c;--blue:#63a6e8}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Raleway,Arial,sans-serif;background:transparent;color:var(--text);padding:20px}
+    button,input,select,textarea{font:inherit}
+    .shell{display:grid;gap:16px}
+    .hero{display:flex;justify-content:space-between;gap:16px;align-items:end;padding:20px;border:1px solid var(--line);border-radius:12px;background:linear-gradient(135deg,rgba(85,185,120,.12),rgba(217,178,76,.08)),var(--panel)}
+    .eyebrow{color:var(--gold);font-size:.72rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+    h1{margin-top:6px;font-size:1.55rem}
+    .hero p{margin-top:7px;color:var(--muted);line-height:1.45}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap}
+    .toolbar select,.toolbar input{min-height:40px;border:1px solid var(--line);border-radius:8px;background:rgba(0,0,0,.22);color:var(--text);padding:0 10px}
+    .btn{min-height:40px;border:0;border-radius:8px;background:var(--gold);color:#10180f;font-weight:900;padding:0 14px;cursor:pointer}
+    .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+    .stat{padding:16px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+    .stat span{color:var(--muted);font-size:.78rem;font-weight:800}.stat strong{display:block;margin-top:8px;font-size:1.8rem}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+    .task{border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden;transition:.18s}
+    .task:hover{border-color:rgba(217,178,76,.45);transform:translateY(-2px)}
+    .task-img{height:142px;background:#0b140f;display:grid;place-items:center;color:var(--muted);overflow:hidden}
+    .task-img img{width:100%;height:100%;object-fit:cover}
+    .task-body{padding:15px;display:grid;gap:10px}
+    .task h3{font-size:1rem}.task p{color:var(--muted);line-height:1.45;font-size:.9rem}
+    .meta{display:flex;gap:8px;flex-wrap:wrap}
+    .badge{display:inline-flex;align-items:center;min-height:24px;padding:0 9px;border-radius:999px;font-size:.72rem;font-weight:900}
+    .alta,.critico{color:#ffd2d2;background:rgba(239,111,108,.14);border:1px solid rgba(239,111,108,.34)}
+    .media,.revision{color:#ffe9ad;background:rgba(217,178,76,.13);border:1px solid rgba(217,178,76,.35)}
+    .baja,.resuelto{color:#cff6da;background:rgba(85,185,120,.13);border:1px solid rgba(85,185,120,.35)}
+    .pendiente{color:#d7e8ff;background:rgba(99,166,232,.13);border:1px solid rgba(99,166,232,.35)}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}.actions button{min-height:36px;border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.04);color:var(--text);padding:0 10px;cursor:pointer;font-weight:800}
+    .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.72);z-index:30;padding:16px}.modal.active{display:flex}
+    .modal-card{width:min(720px,100%);max-height:90vh;overflow:auto;border:1px solid var(--line);border-radius:14px;background:#0b1711;box-shadow:0 24px 70px rgba(0,0,0,.65)}
+    .modal-head,.modal-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px;border-bottom:1px solid var(--line)}.modal-foot{border-top:1px solid var(--line);border-bottom:0;justify-content:flex-end}
+    .modal-body{padding:16px;display:grid;gap:14px}.field{display:grid;gap:6px}.field label{color:var(--gold);font-size:.78rem;font-weight:900;text-transform:uppercase}
+    textarea,select,input[type=file]{width:100%;border:1px solid var(--line);border-radius:8px;background:rgba(0,0,0,.24);color:var(--text);padding:11px}textarea{min-height:96px;resize:vertical}
+    .empty{min-height:160px;display:grid;place-items:center;border:1px dashed var(--line);border-radius:12px;color:var(--muted)}
+    .message{min-height:20px;color:var(--red);font-size:.88rem}.message.ok{color:var(--green)}
+    @media(max-width:780px){body{padding:12px}.hero{align-items:start;flex-direction:column}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  </style>
+  <link rel="stylesheet" href="/css/system-responsive.css">
+  <script src="/js/system-form-helpers.js" defer></script>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div>
+        <div class="eyebrow">Centro de incidencias</div>
+        <h1>Mis tareas asignadas</h1>
+        <p>Gestiona incidencias, registra avances y sube evidencias de reparacion.</p>
+      </div>
+      <div class="toolbar">
+        <input id="q" type="search" maxlength="80" placeholder="Buscar parque o descripcion">
+        <select id="estado">
+          <option value="">Todos</option>
+          <option value="1">Pendiente</option>
+          <option value="2">En revision</option>
+          <option value="3">Resuelto</option>
+          <option value="4">Rechazado</option>
+        </select>
+        <button class="btn" type="button" onclick="cargarTareas()">Actualizar</button>
+      </div>
+    </section>
+    <section class="stats">
+      <article class="stat"><span>Total asignadas</span><strong id="kTotal">0</strong></article>
+      <article class="stat"><span>Pendientes</span><strong id="kPend">0</strong></article>
+      <article class="stat"><span>En revision</span><strong id="kRev">0</strong></article>
+      <article class="stat"><span>Resueltas</span><strong id="kDone">0</strong></article>
+    </section>
+    <section class="grid" id="tasks"></section>
+  </main>
+
+  <section class="modal" id="modal">
+    <div class="modal-card">
+      <div class="modal-head">
+        <div><div class="eyebrow">Gestion de tarea</div><h2 id="modalTitle">Reporte</h2></div>
+        <button class="btn" type="button" onclick="cerrarModal()">Cerrar</button>
+      </div>
+      <div class="modal-body">
+        <div class="field"><label>Estado</label><select id="mEstado"><option value="1">Pendiente</option><option value="2">En revision</option><option value="3">Resuelto</option><option value="4">Rechazado</option></select></div>
+        <div class="field"><label>Comentario de avance</label><textarea id="mComentario" maxlength="1000" placeholder="Describe el avance, reparacion realizada o motivo de cierre..."></textarea></div>
+        <div class="field"><label>Evidencias de reparacion</label><input id="mEvidencias" type="file" accept="image/jpeg,image/png,image/webp" multiple></div>
+        <p class="message" id="modalMsg"></p>
+      </div>
+      <div class="modal-foot">
+        <button class="btn" type="button" onclick="guardarTarea()">Guardar avance</button>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    const token=localStorage.getItem("token")||"";let tareas=[];let actual=null;
+    const authJson=()=>({Authorization:`Bearer ${token}`,"Content-Type":"application/json"});
+    const esc=v=>String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+    const img=v=>/^\/uploads\/reportes\/[A-Za-z0-9._-]+$/.test(String(v||""))?v:"";
+    const estadoClass=e=>e==="Resuelto"?"resuelto":e==="En Revision"||e==="En Revisión"?"revision":"pendiente";
+    const prioClass=p=>String(p||"").toLowerCase();
+    function render(){
+      const q=document.getElementById("q").value.trim().toLowerCase(),estado=document.getElementById("estado").value;
+      const filtered=tareas.filter(t=>(!q||`${t.parque} ${t.descripcion}`.toLowerCase().includes(q))&&(!estado||String(t.id_estado_reporte)===estado));
+      document.getElementById("kTotal").textContent=tareas.length;
+      document.getElementById("kPend").textContent=tareas.filter(t=>Number(t.id_estado_reporte)===1).length;
+      document.getElementById("kRev").textContent=tareas.filter(t=>Number(t.id_estado_reporte)===2).length;
+      document.getElementById("kDone").textContent=tareas.filter(t=>Number(t.id_estado_reporte)===3).length;
+      document.getElementById("tasks").innerHTML=filtered.length?filtered.map(t=>`<article class="task"><div class="task-img">${img(t.foto)?`<img src="${esc(img(t.foto))}" alt="Foto reporte">`:"Sin foto"}</div><div class="task-body"><div class="meta"><span class="badge ${esc(prioClass(t.prioridad))}">${esc(t.prioridad)}</span><span class="badge ${esc(estadoClass(t.estado))}">${esc(t.estado)}</span>${Number(t.es_critico)?'<span class="badge critico">Critico</span>':""}</div><h3>${esc(t.parque)}</h3><p>${esc(t.descripcion).slice(0,180)}</p><div class="actions"><button type="button" onclick="abrirModal(${t.id_reporte})">Gestionar</button></div></div></article>`).join(""):`<div class="empty">No hay tareas con los filtros seleccionados.</div>`;
+    }
+    async function cargarTareas(){
+      const res=await fetch("/api/reportes/gestor/mis-tareas",{headers:{Authorization:`Bearer ${token}`}});
+      const json=await res.json().catch(()=>({}));
+      if(!res.ok||!json.ok){document.getElementById("tasks").innerHTML=`<div class="empty">${esc(json.error||"No se pudieron cargar tareas")}</div>`;return}
+      tareas=json.data||[];render();
+    }
+    function abrirModal(id){actual=tareas.find(t=>Number(t.id_reporte)===Number(id));if(!actual)return;document.getElementById("modalTitle").textContent=`Reporte #${actual.id_reporte} - ${actual.parque}`;document.getElementById("mEstado").value=String(actual.id_estado_reporte||1);document.getElementById("mComentario").value="";document.getElementById("mEvidencias").value="";document.getElementById("modalMsg").textContent="";document.getElementById("modal").classList.add("active")}
+    function cerrarModal(){document.getElementById("modal").classList.remove("active");actual=null}
+    async function guardarTarea(){
+      if(!actual)return;const msg=document.getElementById("modalMsg");msg.textContent="";
+      const estado=Number(document.getElementById("mEstado").value),comentario=document.getElementById("mComentario").value.trim(),files=[...document.getElementById("mEvidencias").files];
+      try{
+        const gestion=await fetch(`/api/reportes/${actual.id_reporte}/gestion`,{method:"PATCH",headers:authJson(),body:JSON.stringify({id_prioridad:actual.id_prioridad,id_estado_reporte:estado,es_critico:Boolean(actual.es_critico),observaciones:actual.observaciones||""})});
+        const gj=await gestion.json().catch(()=>({}));if(!gestion.ok||!gj.ok)throw new Error(gj.error||"No se pudo actualizar estado");
+        if(comentario){const c=await fetch(`/api/reportes/${actual.id_reporte}/comentarios`,{method:"POST",headers:authJson(),body:JSON.stringify({comentario,tipo:estado===3?"cierre":"avance"})});const cj=await c.json().catch(()=>({}));if(!c.ok||!cj.ok)throw new Error(cj.error||"No se pudo guardar comentario")}
+        if(files.length){const fd=new FormData();files.forEach(f=>fd.append("evidencias",f));const e=await fetch(`/api/reportes/${actual.id_reporte}/evidencias`,{method:"POST",headers:{Authorization:`Bearer ${token}`},body:fd});const ej=await e.json().catch(()=>({}));if(!e.ok||!ej.ok)throw new Error(ej.error||"No se pudieron subir evidencias")}
+        msg.textContent="Avance guardado correctamente.";msg.classList.add("ok");await cargarTareas();setTimeout(cerrarModal,700);
+      }catch(error){msg.classList.remove("ok");msg.textContent=error.message||"Error guardando tarea"}
+    }
+    document.getElementById("q").addEventListener("input",render);document.getElementById("estado").addEventListener("change",render);window.onload=cargarTareas;
+  </script>
+</body>
+</html>
